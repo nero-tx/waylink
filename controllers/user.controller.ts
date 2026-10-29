@@ -11,7 +11,7 @@ const userWishList = async () => {
     );
   }
 
-  const key = generateKey("user", session.user.id, "wishlists");
+  const key = generateKey("wishlists", session.user.id ,"*");
   const cache = await getCache(key);
   if (cache) {
     return cache;
