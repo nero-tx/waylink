@@ -61,3 +61,46 @@ export async function delCache(...keys: string[]): Promise<number> {
     return 0;
   }
 }
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+// Deletes exact keys. Retries once on failure, because a failed delete leaves stale data.
+export async function invalidateCache(
+  keys: string[],
+  { retries = 3, delayMS = 125 }: { retries?: number; delayMS?: number } = {},
+): Promise<boolean> {
+  const uniqueKeys = [...new Set(keys)];
+  if (uniqueKeys.length === 0) return true;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const redis = await withTimeout(redisClient());
+      await withTimeout(redis.del(uniqueKeys));
+      return true;
+    } catch (err) {
+      logCacheError("invalidate", uniqueKeys.join(", "), err);
+      if (attempt === retries) break;
+
+      await sleep(delayMS);
+    }
+  }
+  return false;
+}
+
+const SEPARATOR = ":";
+
+export function generateKey(...args: string[]): string {
+  if (args.length === 0) {
+    throw new Error("generateKey needs at least one part");
+  }
+
+  return args
+    .map((part) => {
+      if (typeof part !== "string" || part.length === 0) {
+        throw new Error("generateKey parts must be non-empty strings");
+      }
+      return encodeURIComponent(part);
+    })
+    .join(SEPARATOR);
+}
