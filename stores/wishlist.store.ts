@@ -14,7 +14,8 @@ interface WishlistState {
   updateWishlist: (id: string, newData: Partial<Wishlist>) => void;
 
   setItems: (wishlistId: string, items: WishlistItem[]) => void;
-  addItems: (newItems: WishlistItem[]) => void;
+  updateItem: (itemId: string, newData: Partial<WishlistItem>) => void;
+  addItems: (newItems: WishlistItem | WishlistItem[]) => void;
   removeItem: (itemId: string) => void;
   clearItems: () => void;
 }
@@ -25,29 +26,18 @@ export const useWishlistStore = create<WishlistState>((set) => ({
   items: [],
 
   setWishlists: (wishlists) =>
-    set((state) => ({
+    set((_) => ({
       wishlists,
-      activeWishlistId: wishlists.some(
-        (list) => list.id === state.activeWishlistId,
-      )
-        ? state.activeWishlistId
-        : (wishlists[0]?.id ?? null),
-      items: wishlists.some((list) => list.id === state.activeWishlistId)
-        ? state.items
-        : [],
     })),
 
   setActiveWishlist: (id) =>
-    set((state) => ({
+    set((_) => ({
       activeWishlistId: id,
-      items: state.activeWishlistId === id ? state.items : [],
     })),
 
   addWishlist: (wishlist) =>
     set((state) => ({
       wishlists: [...state.wishlists, wishlist],
-      activeWishlistId: wishlist.id,
-      items: [],
     })),
 
   removeWishlist: (id) =>
@@ -58,9 +48,7 @@ export const useWishlistStore = create<WishlistState>((set) => ({
 
       return {
         wishlists,
-        activeWishlistId: isActive
-          ? (wishlists[0]?.id ?? null)
-          : state.activeWishlistId,
+        activeWishlistId: isActive ? null : state.activeWishlistId,
         items: isActive ? [] : state.items,
       };
     }),
@@ -78,6 +66,7 @@ export const useWishlistStore = create<WishlistState>((set) => ({
   addItems: (newItems) =>
     set((state) => {
       const existingIds = new Set(state.items.map((item) => item.id));
+      newItems = Array.isArray(newItems) ? newItems : [newItems];
 
       return {
         items: [
@@ -86,6 +75,13 @@ export const useWishlistStore = create<WishlistState>((set) => ({
         ],
       };
     }),
+
+  updateItem: (itemId, newData) =>
+    set((state) => ({
+      items: state.items.map((item) =>
+        item.id === itemId ? { ...item, ...newData } : item,
+      ),
+    })),
 
   removeItem: (itemId) =>
     set((state) => ({

@@ -5,235 +5,256 @@ import {
   updateList,
   updateNote,
 } from "@/actions/list.action";
-import { Wishlist, WishlistItem } from "@/lib/all-types";
-import { asyncHandler } from "@/lib/asyncHandler";
+import type { Wishlist } from "@/lib/all-types";
 import { WishlistFormValues } from "@/validations";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useWishlistStore } from "@/stores/wishlist.store";
 
 type LayoutState = "loading" | "error" | "data" | "empty";
+
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
 export const useWishlists = () => {
-  const [wishlists, setWishLists] = useState<Wishlist[]>([]);
-  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [activeListId, setActiveListId] = useState("");
+  // Zustand state
+  const wishlists = useWishlistStore((s) => s.wishlists);
+  const activeListId = useWishlistStore((s) => s.activeWishlistId);
+  const items = useWishlistStore((s) => s.items);
+
+  // Zustand actions
+  const setWishlists = useWishlistStore((s) => s.setWishlists);
+  const setActiveListId = useWishlistStore((s) => s.setActiveWishlist);
+  const setItems = useWishlistStore((s) => s.setItems);
+  const clearItems = useWishlistStore((s) => s.clearItems);
+
+  const addWishlist = useWishlistStore((s) => s.addWishlist);
+  const removeWishlist = useWishlistStore((s) => s.removeWishlist);
+  const updateWishlist = useWishlistStore((s) => s.updateWishlist);
+
+  const removeItem = useWishlistStore((s) => s.removeItem);
+  const updateItem = useWishlistStore((s) => s.updateItem);
+
+  // Local UI state
   const [listsState, setListsState] = useState<LayoutState>("loading");
   const [itemsState, setItemsState] = useState<LayoutState>("empty");
   const [spinning, setSpinning] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const activeList = useMemo(() => {
-    return wishlists.find((w) => w.id === activeListId) ?? null;
-  }, [wishlists, activeListId]);
+  const activeList = useMemo(
+    () => wishlists.find((list) => list.id === activeListId) ?? null,
+    [wishlists, activeListId],
+  );
 
   const refresh = () => setRefreshKey((prev) => prev + 1);
 
   const handleCreate = async (values: WishlistFormValues) => {
-    const res = await createList(values);
-    if (res.state === "error") {
-      toast.error(res.message);
-      return;
+    try {
+      const res = await createList(values);
+
+      if (res.state === "error") {
+        toast.error(res.message);
+        return;
+      }
+
+      addWishlist(res.list as Wishlist);
+      setListsState("data");
+
+      toast.success(res.message);
+    } catch {
+      toast.error("Failed to create wishlist");
     }
-
-    const newList = res.list as Wishlist;
-
-    setWishLists((prev) => [...prev, newList]);
-    setListsState("data");
-    toast.success(res.message);
   };
 
   const handleUpdate = async (id: string, values: WishlistFormValues) => {
-    const res = await updateList(id, values);
+    try {
+      const res = await updateList(id, values);
 
-    if (res.state === "error") {
-      toast.error(res.message);
-      return;
+      if (res.state === "error") {
+        toast.error(res.message);
+        return;
+      }
+
+      updateWishlist(id, res.list as Wishlist);
+
+      toast.success(res.message);
+    } catch {
+      toast.error("Failed to update wishlist");
     }
-
-    const updatedList = res.list as Wishlist;
-    setWishLists((prev) =>
-      prev.map((list) => (list.id === updatedList.id ? updatedList : list)),
-    );
-
-    toast.success(res.message);
   };
 
   const handleRemove = async (id: string) => {
-    const res = await removeList(id);
+    try {
+      const res = await removeList(id);
 
-    if (res.state === "error") {
-      toast.error(res.message);
-      return;
-    }
-
-    setWishLists((prev) => {
-      const next = prev.filter((list) => list.id !== id);
-      if (activeListId === id) {
-        setActiveListId(next[0]?.id ?? "");
+      if (res.state === "error") {
+        toast.error(res.message);
+        return;
       }
-      if (next.length === 0) {
+
+      removeWishlist(id);
+
+      const remainingLists = useWishlistStore.getState().wishlists;
+
+      if (remainingLists.length === 0) {
         setListsState("empty");
-        setWishlistItems([]);
         setItemsState("empty");
       }
 
-      return next;
-    });
-
-    toast.success(res.message);
+      toast.success(res.message);
+    } catch {
+      toast.error("Failed to remove wishlist");
+    }
   };
 
-  const getLists = async (): Promise<Wishlist[]> => {
-    const res = await fetch(`${baseUrl}/api/user/wish-list`);
+  useEffect(() => {
+    const controller = new AbortController();
 
-    if (!res.ok) {
-      throw new Error("Failed to get all lists");
-    }
+    const fetchLists = async () => {
+      setListsState("loading");
+      setSpinning(true);
 
-    const data = await res.json();
-    return data.data;
-  };
+      try {
+        const res = await fetch(`${baseUrl}/api/user/wish-list`, {
+          signal: controller.signal,
+        });
 
-  const getItems = async (id: string) => {
-    const res = await fetch(`${baseUrl}/api/user/wish-list/${id}`);
+        if (!res.ok) {
+          throw new Error("Failed to get all lists");
+        }
 
-    if (!res.ok) {
-      throw new Error("Failed to get list items");
-    }
+        const result = await res.json();
+        const data: Wishlist[] = result.data ?? [];
 
-    const data = await res.json();
-    return data ?? [];
-  };
+        setWishlists(data);
+        setListsState(data.length ? "data" : "empty");
+      } catch (error) {
+        if (controller.signal.aborted) return;
 
-  const fetchItems = async (listId: string) => {
-    if (!listId) {
-      setWishlistItems([]);
-      setItemsState("empty");
-      return;
-    }
+        setListsState("error");
+        toast.error("Failed to load wishlists");
+      } finally {
+        if (!controller.signal.aborted) {
+          setSpinning(false);
+        }
+      }
+    };
 
-    setItemsState("loading");
+    fetchLists();
 
-    const [data, error] = await asyncHandler(getItems(listId));
+    return () => controller.abort();
+  }, [refreshKey]);
 
-    if (error || !data) {
-      setWishlistItems([]);
-      setItemsState("error");
-      return;
-    }
+  useEffect(() => {
+    const controller = new AbortController();
 
-    const items = data.data.items ?? [];
-    setWishlistItems(items);
+    const fetchItems = async () => {
+      if (!activeListId) {
+        clearItems();
+        setItemsState("empty");
+        return;
+      }
 
-    if (items.length === 0) {
-      setItemsState("empty");
-      return;
-    }
+      setItemsState("loading");
 
-    setItemsState("data");
-  };
+      try {
+        const res = await fetch(
+          `${baseUrl}/api/user/wish-list/${activeListId}`,
+          { signal: controller.signal },
+        );
 
-  const fetchLists = async () => {
-    setListsState("loading");
-    setSpinning(true);
+        if (!res.ok) {
+          throw new Error("Failed to get wishlist items");
+        }
 
-    const [data, error] = await asyncHandler(getLists());
+        const result = await res.json();
+        const data = result.data?.items ?? [];
 
-    if (error) {
-      setListsState("error");
-      setSpinning(false);
-      return;
-    }
+        if (controller.signal.aborted) return;
 
-    if (!data || data.length === 0) {
-      setWishLists([]);
-      setActiveListId("");
-      setListsState("empty");
-      setSpinning(false);
-      return;
-    }
+        // Store guard prevents results for an old list from replacing
+        // the currently active list's items.
+        setItems(activeListId, data);
+        setItemsState(data.length ? "data" : "empty");
+      } catch {
+        if (controller.signal.aborted) return;
 
-    setWishLists(data);
-    setListsState("data");
+        clearItems();
+        setItemsState("error");
+      }
+    };
 
-    setSpinning(false);
-  };
+    fetchItems();
+
+    return () => controller.abort();
+  }, [activeListId]);
 
   const handleDeleteItem = async (itemId: string) => {
     if (!activeListId) return;
-    const res = await deleteItem(activeListId, itemId);
 
-    if (res.state === "error") {
-      toast.error(res.message);
-      return;
-    }
-    setWishlistItems((prev) => {
-      const next = prev.filter((item) => item.id !== itemId);
+    const listId = activeListId;
 
-      if (next.length === 0) {
-        setItemsState("empty");
+    try {
+      const res = await deleteItem(listId, itemId);
+
+      if (res.state === "error") {
+        toast.error(res.message);
+        return;
       }
 
-      return next;
-    });
-    
-    // decrement totalItems for the active wishlist
-    setWishLists((prev) =>
-      prev.map((list) =>
-        list.id === activeListId
-          ? { ...list, totalItems: Math.max(0, list.totalItems - 1) }
-          : list,
-      ),
-    );
+      removeItem(itemId);
 
-    toast.success(res.message);
+      const currentList = useWishlistStore
+        .getState()
+        .wishlists.find((list) => list.id === listId);
+
+      updateWishlist(listId, {
+        totalItems: Math.max(0, (currentList?.totalItems ?? 0) - 1),
+      });
+
+      const remainingItems = useWishlistStore.getState().items;
+
+      setItemsState(remainingItems.length ? "data" : "empty");
+
+      toast.success(res.message);
+    } catch {
+      toast.error("Failed to delete wishlist item");
+    }
   };
 
   const handleUpdateNote = async (itemId: string, newNote: string) => {
     if (!activeListId) return;
 
-    const res = await updateNote(itemId, activeListId, newNote);
+    const listId = activeListId;
 
-    if (res.state === "error") {
-      toast.error(res.message);
-      return;
+    try {
+      const res = await updateNote(itemId, listId, newNote);
+
+      if (res.state === "error") {
+        toast.error(res.message);
+        return;
+      }
+
+      updateItem(itemId, { notes: newNote });
+
+      toast.success(res.message);
+    } catch {
+      toast.error("Failed to update note");
     }
-
-    setWishlistItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId ? { ...item, notes: newNote } : item,
-      ),
-    );
-
-    toast.success(res.message);
   };
 
-  useEffect(() => {
-    fetchLists();
-  }, [refreshKey]);
-
-  useEffect(() => {
-    fetchItems(activeListId);
-  }, [activeListId]);
-
   return {
-    // state
     wishlists,
-    wishlistItems,
+    wishlistItems: items,
     activeListId,
     activeList,
     listsState,
     itemsState,
     spinning,
-    // setters
     setActiveListId,
-    // list actions
+    refresh,
     handleCreate,
     handleUpdate,
     handleRemove,
-    refresh,
-    // item actions
     handleDeleteItem,
     handleUpdateNote,
   };

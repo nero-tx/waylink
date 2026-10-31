@@ -19,6 +19,7 @@ import {
   WishlistSidebarCard,
 } from "../_components/WishList";
 import { useWishlists } from "@/hooks/useWishlist";
+import { AddServicesDialog } from "../_components/AddServicesDialog";
 
 export default function WishlistPage() {
   const {
@@ -171,8 +172,6 @@ export default function WishlistPage() {
 
       <div className="flex-1 h-full flex flex-col min-w-0 overflow-x-hidden bg-card/70">
         <MobileListDropdown
-          wishlists={wishlists}
-          activeListId={activeListId}
           onSelect={setActiveListId}
           spinnig={spinning}
           openDialog={() => {
@@ -218,27 +217,29 @@ export default function WishlistPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {activeList && <AddServicesDialog listName={activeList.name} />}
+
                 <Button
-                  size="icon-sm"
+                  size="icon"
                   variant="outline"
                   onClick={() => openDeleteDialog(activeList)}
                 >
                   <Trash2 />
                 </Button>
                 <Button
-                  size="icon-sm"
+                  size="icon"
                   variant="outline"
                   onClick={() => openEditDialog(activeList)}
                 >
                   <Edit2 />
                 </Button>
                 <Button
-                  size="icon-sm"
+                  size="icon"
                   variant="outline"
-                  onClick={() => setActiveListId("")}
+                  onClick={() => setActiveListId(null)}
                 >
-                  <X size={16} onClick={() => setActiveListId("")} />
+                  <X size={16} />
                 </Button>
               </div>
             </motion.div>
