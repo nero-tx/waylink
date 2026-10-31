@@ -10,7 +10,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ServiceType, Wishlist, WishlistItem } from "@/lib/all-types";
+import {
+  ServiceListItem,
+  ServiceType,
+  Wishlist,
+  WishlistItem,
+} from "@/lib/all-types";
 import { displayMedia, normalizeLocation } from "@/lib/helpers";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,12 +29,22 @@ import {
   MapPin,
   Plus,
   RefreshCcw,
+  SlidersHorizontal,
   Star,
   StickyNote,
   Trash2,
   X,
 } from "lucide-react";
 import { ComponentProps, KeyboardEvent, useEffect, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { AddServicesDialog } from "./AddServicesDialog";
+import { useWishlistStore } from "@/stores/wishlist.store";
 
 const TYPE_CONFIG: Record<ServiceType, { label: string; color: string }> = {
   experience: {
@@ -51,8 +66,6 @@ type ListDeleteAlertProps = {
 };
 
 interface MobileListDropdownProps {
-  wishlists: Wishlist[];
-  activeListId: string | null;
   onSelect: (id: string) => void;
   spinnig: boolean;
   openDialog: () => void;
@@ -89,8 +102,6 @@ export function SpinningBtn({
 }
 
 export function MobileListDropdown({
-  wishlists,
-  activeListId,
   onSelect,
   spinnig,
   openDialog,
@@ -100,6 +111,8 @@ export function MobileListDropdown({
   state = "data",
 }: MobileListDropdownProps) {
   const [open, setOpen] = useState(false);
+  const wishlists = useWishlistStore((s) => s.wishlists);
+  const activeListId = useWishlistStore((s) => s.activeWishlistId);
   const active = wishlists.find((w) => w.id === activeListId);
 
   return (
@@ -145,42 +158,107 @@ export function MobileListDropdown({
 
         <div className="flex-1" />
 
-        {onRefrsh && (
-          <Button
-            size="icon-sm"
-            variant="outline"
-            disabled={spinnig}
-            onClick={onRefrsh}
-          >
-            <motion.div
-              className="relative z-10"
-              animate={spinnig ? { rotate: 360 } : { rotate: 0 }}
-              transition={
-                spinnig
-                  ? { duration: 0.65, repeat: Infinity, ease: "linear" }
-                  : { duration: 0.32, ease: "easeOut" }
-              }
-            >
-              <RefreshCcw size={16} />
-            </motion.div>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Mobile actions */}
+          <div className="flex items-center gap-2 md:hidden">
+            {active && <AddServicesDialog listName={active.name} />}
 
-        <Button className="shrink-0" size="sm" onClick={openDialog}>
-          <Plus size={16} /> New List
-        </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="outline" aria-label="Open actions">
+                  <SlidersHorizontal size={18} />
+                </Button>
+              </DropdownMenuTrigger>
 
-        {active && onEditActive && (
-          <Button size="icon-sm" variant="outline" onClick={onEditActive}>
-            <Edit2 size={16} />
-          </Button>
-        )}
+              <DropdownMenuContent align="end" className="w-48">
+                {onRefrsh && (
+                  <DropdownMenuItem disabled={spinnig} onSelect={onRefrsh}>
+                    <motion.div
+                      animate={spinnig ? { rotate: 360 } : { rotate: 0 }}
+                      transition={
+                        spinnig
+                          ? { duration: 0.65, repeat: Infinity, ease: "linear" }
+                          : { duration: 0.32, ease: "easeOut" }
+                      }
+                    >
+                      <RefreshCcw size={16} />
+                    </motion.div>
+                    Refresh
+                  </DropdownMenuItem>
+                )}
 
-        {active && onDeleteActive && (
-          <Button size="icon-sm" variant="destructive" onClick={onDeleteActive}>
-            <Trash2 size={16} />
-          </Button>
-        )}
+                <DropdownMenuItem onSelect={openDialog}>
+                  <Plus className="size-4" />
+                  New List
+                </DropdownMenuItem>
+
+                {active && onEditActive && (
+                  <DropdownMenuItem onSelect={onEditActive}>
+                    <Edit2 className="size-4" />
+                    Edit List
+                  </DropdownMenuItem>
+                )}
+
+                {active && onDeleteActive && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onSelect={onDeleteActive}
+                    >
+                      <Trash2 className="size-4" />
+                      Delete List
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Desktop actions */}
+          <div className="hidden items-center gap-2 md:flex">
+            {onRefrsh && (
+              <Button
+                size="icon-sm"
+                variant="outline"
+                disabled={spinnig}
+                onClick={onRefrsh}
+              >
+                <motion.div
+                  animate={spinnig ? { rotate: 360 } : { rotate: 0 }}
+                  transition={
+                    spinnig
+                      ? { duration: 0.65, repeat: Infinity, ease: "linear" }
+                      : { duration: 0.32, ease: "easeOut" }
+                  }
+                >
+                  <RefreshCcw size={16} />
+                </motion.div>
+              </Button>
+            )}
+
+            <Button className="shrink-0" size="sm" onClick={openDialog}>
+              <Plus size={16} />
+              New List
+            </Button>
+
+            {active && onEditActive && (
+              <Button size="icon-sm" variant="outline" onClick={onEditActive}>
+                <Edit2 size={16} />
+              </Button>
+            )}
+
+            {active && onDeleteActive && (
+              <Button
+                size="icon-sm"
+                variant="destructive"
+                onClick={onDeleteActive}
+              >
+                <Trash2 size={16} />
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
 
       <AnimatePresence>

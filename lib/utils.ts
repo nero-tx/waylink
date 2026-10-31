@@ -393,3 +393,31 @@ export function calculateFees(totalAmount: string, commissionRate: string) {
     providerFee: (providerFeeCents / 100).toFixed(2),
   };
 }
+
+export type GeneratedColor = {
+  base: string;
+  alpha: (opacity: number) => string;
+};
+
+const SATURATION = 65;
+const LIGHTNESS = 50;
+
+export function generateColor(text: string): GeneratedColor {
+  let hash = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
+    hash |= 0;
+  }
+
+  const hue = Math.abs(hash) % 360;
+  const base = `hsl(${hue}, ${SATURATION}%, ${LIGHTNESS}%)`;
+
+  return {
+    base,
+    alpha: (opacity: number) => {
+      const a = Math.max(0, Math.min(1, opacity));
+      return `hsla(${hue}, ${SATURATION}%, ${LIGHTNESS}%, ${a})`;
+    },
+  };
+}

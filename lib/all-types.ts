@@ -561,3 +561,12 @@ export type Variant = {
   childPrice: string;
   infantPrice: string;
 };
+
+export type ServiceListItem = {
+  id: string;
+  type: ServiceType;
+  title: string;
+  slug: string;
+  status: "active" | "draft" | "paused" | "archived";
+  media?: Media[];
+};
