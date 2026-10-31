@@ -44,9 +44,7 @@ export const protectAction = async (role: Role) => {
   try {
     const req = await request();
 
-    const decision = await aj(role ?? "user").protect(req, {
-      requested: 1,
-    });
+    const decision = await aj(role ?? "user").protect(req);
 
     if (decision.isDenied()) {
       const { message, code } = getHumanMessage(decision.reason);
