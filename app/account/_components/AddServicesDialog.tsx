@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Loader2, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,94 +22,78 @@ import { displayMedia, initials } from "@/lib/helpers";
 import Image from "next/image";
 import { useWishlistStore } from "@/stores/wishlist.store";
 import { cn, generateColor } from "@/lib/utils";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const MAX_SELECTION = 30;
+const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
-const dummy: ServiceListItem[] = [
-  {
-    id: "3f9c1a2e-5b7d-4e8f-9a1b-0c2d3e4f5a61",
-    type: "experience",
-    title: "Sunset Desert Safari in Siwa",
-    slug: "siwa-sunset-desert-safari",
-    status: "active",
-  },
-  {
-    id: "3f9c1a2e-5b7d-4e8f-9a1b-0c2d3e4f5a62",
-    type: "experience",
-    title: "Cave Swimming at Cleopatra's Pool",
-    slug: "siwa-cleopatra-pool",
-    status: "active",
-  },
-  {
-    id: "3f9c1a2e-5b7d-4e8f-9a1b-0c2d3e4f5a63",
-    type: "transport",
-    title: "Private Transfer: Cairo to Siwa",
-    slug: "cairo-siwa-private-transfer",
-    status: "active",
-  },
-  {
-    id: "3f9c1a2e-5b7d-4e8f-9a1b-0c2d3e4f5a64",
-    type: "transport",
-    title: "4x4 Jeep Rental (Full Day)",
-    slug: "jeep-rental-full-day",
-    status: "active",
-  },
-  {
-    id: "3f9c1a2e-5b7d-4e8f-9a1b-0c2d3e4f5a65",
-    type: "experience",
-    title: "Eco Lodge with Mud-Brick Rooms",
-    slug: "siwa-eco-lodge",
-    status: "active",
-  },
-  {
-    id: "3f9c1a2e-5b7d-4e8f-9a1b-0c2d3e4f5a66",
-    type: "transport",
-    title: "Luxury Oasis Resort",
-    slug: "siwa-oasis-resort",
-    status: "active",
-  },
-  {
-    id: "3f9c1a2e-5b7d-4e8f-9a1b-0c2d3e4f5a67",
-    type: "experience",
-    title: "Old Town Walking Tour (Coming Soon)",
-    slug: "siwa-old-town-tour",
-    status: "draft", // hidden in the dialog
-  },
-  {
-    id: "3f9c1a2e-5b7d-4e8f-9a1b-0c2d3e4f5a68",
-    type: "transport",
-    title: "Airport Shuttle (Paused)",
-    slug: "airport-shuttle",
-    status: "paused", // hidden in the dialog
-  },
-];
-
-export function AddServicesDialog({
-  listName,
-}: {
-  listName?: string;
-}) {
+export function AddServicesDialog({ listName }: { listName?: string }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
-  const [services, setServices] = useState<ServiceListItem[]>(dummy);
+  const [isLoading, setIsLoading] = useState(true);
+  const [services, setServices] = useState<ServiceListItem[]>([]);
 
   const activeListId = useWishlistStore((state) => state.activeWishlistId);
   const items = useWishlistStore((state) => state.items);
 
-  const savedItemIds = items.map((i) => i.id);
+  const savedItemIds = items.map((i) => i.itemId);
   const saved = useMemo(() => new Set(savedItemIds), [savedItemIds]);
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return services.filter(
-      (s) =>
-        s.status === "active" &&
-        (q === "" || s.title.toLowerCase().includes(q)),
-    );
-  }, [services, query]);
+  const debounce = useDebounce(query);
+  const fetchUrl = useMemo(() => {
+    const url = new URL(`${baseURL}/api/user/wish-list/list`);
+    url.searchParams.set("search", debounce);
+    url.searchParams.set("limit", MAX_SELECTION.toString());
+    return url;
+  }, [debounce]);
+
+  useEffect(() => {
+    if (!open) return;
+    const abort = new AbortController();
+
+    const fetchServices = async () => {
+      setError(null);
+      setIsLoading(true);
+      try {
+        const res = await fetch(fetchUrl.toString(), {
+          signal: abort.signal,
+        });
+        if (!res.ok) {
+          setError("Something went wrong. Please try again.");
+          return;
+        }
+
+        const json = await res.json();
+        console.log("Fetched services:", json);
+        if (json.status === "success") {
+          setServices(json.data);
+        } else if (json.status === "empty") {
+          setServices([]);
+        } else {
+          throw new Error(json.message || "Failed to load services.");
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+
+        setError(
+          error instanceof Error ? error.message : "Failed to load services.",
+        );
+      } finally {
+        if (!abort.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchServices();
+    return () => abort.abort();
+  }, [open, debounce]);
 
   function toggle(id: string) {
     setError(null);
@@ -195,7 +179,27 @@ export function AddServicesDialog({
         </div>
 
         <ScrollArea className="max-h-80 rounded-md border">
-          {visible.length === 0 ? (
+          {isLoading ? (
+            <div className="space-y-1 divide-y">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div className="flex items-center gap-3 p-3" key={i}>
+                  <Skeleton className="size-4 shrink-0 rounded-sm" />
+
+                  <Skeleton className="size-10 shrink-0 rounded-md" />
+
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-2/5" />
+
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-3 w-12" />
+                      <Skeleton className="size-1 rounded-full" />
+                      <Skeleton className="h-3 w-14" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : services.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
               <svg
                 viewBox="0 0 80 80"
@@ -244,7 +248,7 @@ export function AddServicesDialog({
             </div>
           ) : (
             <ul className="divide-y">
-              {visible.map((service) => {
+              {services.map((service) => {
                 const isSaved = saved.has(service.id);
                 const isChecked = selected.has(service.id);
                 const { cover } = displayMedia(service.media ?? []);
@@ -280,7 +284,7 @@ export function AddServicesDialog({
                         <div
                           className="h-10 w-10 shrink-0 rounded-md bg-muted grid place-items-center"
                           style={{
-                            backgroundColor: co.alpha(0.2), 
+                            backgroundColor: co.alpha(0.2),
                             color: co.base,
                           }}
                         >
@@ -349,5 +353,25 @@ export function AddServicesDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function LoadingUI() {
+  return (
+    <div className="flex items-center gap-3 p-3">
+      <Skeleton className="size-4 shrink-0 rounded-sm" />
+
+      <Skeleton className="size-10 shrink-0 rounded-md" />
+
+      <div className="min-w-0 flex-1 space-y-2">
+        <Skeleton className="h-4 w-2/5" />
+
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="size-1 rounded-full" />
+          <Skeleton className="h-3 w-14" />
+        </div>
+      </div>
+    </div>
   );
 }

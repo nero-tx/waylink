@@ -62,7 +62,7 @@ const listServices = async (url: URL) => {
     const key = generateKey("wishlists", "services");
 
     const cache = await getCache(key);
-    if (cache) {
+    if (cache && !search) {
       return cache;
     }
 
@@ -70,7 +70,8 @@ const listServices = async (url: URL) => {
       search ?? "",
       limit ? parseInt(limit) : 10,
     );
-    await setCache(key, res, 3600);
+
+    if (!search) await setCache(key, res, 3600);
 
     return res;
   } catch (error) {
