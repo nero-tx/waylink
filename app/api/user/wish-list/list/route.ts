@@ -1,0 +1,10 @@
+import { tryCatch } from "@/lib/handler";
+import { userController } from "@/controllers/user.controller";
+import { NextRequest } from "next/server";
+
+export async function GET(req: NextRequest) {
+  return tryCatch(req, async () => {
+    const result = await userController.listServices(new URL(req.url));
+    return result;
+  });
+}

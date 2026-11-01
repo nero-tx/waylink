@@ -3,13 +3,25 @@ import {
   location,
   productMedia,
   products,
+  productScores,
   productStats,
   providers,
   wishlistItems,
   wishlists,
 } from "@/db/schemas";
-import { Location, Media } from "@/lib/all-types";
-import { count, eq, getTableColumns, sql } from "drizzle-orm";
+import { Location, Media, ServiceListItem } from "@/lib/all-types";
+import { buildSearchQuery, mergeWhere } from "@/lib/query_parser/helpers";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 
 async function getUserWishlists(userId: string) {
   if (!userId) throw new Error("User id is required.");
@@ -82,12 +94,54 @@ async function getListItems(listId: string) {
   return { items, total };
 }
 
-const getUserProvider = async(userId: string) => {
+const getUserProvider = async (userId: string) => {
   const provider = await db.query.providers.findFirst({
     where: eq(providers.ownerId, userId),
   });
 
   return provider;
-}
+};
 
-export const userService = { getUserWishlists, getListItems, getUserProvider };
+const listServices = async (
+  search: string,
+  limit: number,
+): Promise<ServiceListItem[]> => {
+  const searchQuery = buildSearchQuery(products.searchVector, search, "fts");
+  const cover = db
+    .select({
+      productId: productMedia.productId,
+      media: sql<Media>`to_jsonb(${productMedia})`.as("media"),
+    })
+    .from(productMedia)
+    .where(and(eq(productMedia.type, "image"), eq(productMedia.isCover, true)))
+    .limit(1)
+    .as("cover");
+
+  const rows = await db
+    .select({
+      id: products.id,
+      title: products.title,
+      slug: products.slug,
+      type: products.type,
+      status: products.status,
+      coverMedia: cover.media,
+    })
+    .from(products)
+    .innerJoin(productScores, eq(productScores.productId, products.id))
+    .leftJoin(cover, eq(cover.productId, products.id))
+    .where(mergeWhere(eq(products.status, "active"), searchQuery))
+    .orderBy(desc(productScores.finalScore))
+    .limit(limit);
+
+  return rows.map(({ coverMedia, ...service }) => ({
+    ...service,
+    media: coverMedia ? [coverMedia] : [],
+  }));
+};
+
+export const userService = {
+  getUserWishlists,
+  getListItems,
+  getUserProvider,
+  listServices,
+};
