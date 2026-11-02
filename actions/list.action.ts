@@ -247,25 +247,28 @@ const inputSchema = z.object({
 export async function addWishlistItem(input: {
   wishlistId: string;
   items: string[];
-}) {
-  const guard = await protectAction("user");
+}): Promise<{
+  state: "success" | "error";
+  message: string;
+}> {
+  const [guard, session] = await Promise.all([
+    protectAction("user"),
+    getAuthSession(),
+  ]);
 
   if (!guard.ok) {
     return {
+      state: "error",
       message:
         guard?.message || "Security system unavailable. Try again later.",
-      state: "error",
     };
   }
 
-  const session = await getAuthSession();
-  if (!session) {
-    return { state: "error", message: "Unauthorized" };
-  }
+  if (!session) return { state: "error", message: "Unauthorized" };
 
   const parsed = inputSchema.safeParse({
     ...input,
-    items: [...new Set(input.items)], // dedupe before validating
+    items: [...new Set(input.items)],
   });
   if (!parsed.success) {
     return {
@@ -288,6 +291,7 @@ export async function addWishlistItem(input: {
     }),
   ]);
 
+  // Ownership is checked before any result is used
   if (!ownerList) {
     return {
       state: "error",
@@ -295,14 +299,8 @@ export async function addWishlistItem(input: {
     };
   }
 
-  if (found.length !== itemIds.length) {
-    const foundIds = new Set(found.map((p) => p.id));
-    const missing = itemIds.filter((id) => !foundIds.has(id));
-    return {
-      state: "error",
-      message: "Some services were not found",
-      missing,
-    };
+  if (found.length === 0) {
+    return { state: "success", message: "Nothing was added" };
   }
 
   const inserted = await db
@@ -315,27 +313,24 @@ export async function addWishlistItem(input: {
       })),
     )
     .onConflictDoNothing()
-    .returning();
+    .returning({
+      itemId: wishlistItems.itemId,
+      itemType: wishlistItems.itemType,
+    });
 
-  const skipped = found.length - inserted.length;
+  if (inserted.length > 0) {
+    after(() =>
+      invalidateCache([
+        generateKey("wishlist", wishlistId, "items"),
+        generateKey("wishlists", userId, "*"),
+      ]),
+    );
 
-  after(() => delCache(generateKey("wishlist", wishlistId, "items")));
-
-  if (inserted.length === 0) {
-    return {
-      state: "error",
-      message: "All selected items are already in this wishlist",
-      skipped,
-    };
+    return { state: "success", message: `Added ${inserted.length} items successfully` };
   }
 
   return {
     state: "success",
-    message:
-      skipped > 0
-        ? `Added ${inserted.length} items, ${skipped} already in the list`
-        : `Added ${inserted.length} items`,
-    items: inserted,
-    skipped,
+    message: "All selected items are already in this list",
   };
 }

@@ -186,7 +186,7 @@ export const useWishlists = () => {
     fetchItems();
 
     return () => controller.abort();
-  }, [activeListId]);
+  }, [activeListId ,refreshKey]);
 
   const handleDeleteItem = async (itemId: string) => {
     if (!activeListId) return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useTransition } from "react";
 import { Loader2, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,6 +24,8 @@ import { useWishlistStore } from "@/stores/wishlist.store";
 import { cn, generateColor } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Skeleton } from "@/components/ui/skeleton";
+import { addWishlistItem } from "@/actions/list.action";
+import { useWishlists } from "@/hooks/useWishlist";
 
 const MAX_SELECTION = 30;
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
@@ -33,15 +35,16 @@ export function AddServicesDialog({ listName }: { listName?: string }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [services, setServices] = useState<ServiceListItem[]>([]);
 
+  const [isPending, startTransition] = useTransition();
   const activeListId = useWishlistStore((state) => state.activeWishlistId);
   const items = useWishlistStore((state) => state.items);
 
   const savedItemIds = items.map((i) => i.itemId);
   const saved = useMemo(() => new Set(savedItemIds), [savedItemIds]);
+  const { refresh } = useWishlists();
 
   const debounce = useDebounce(query);
   const fetchUrl = useMemo(() => {
@@ -87,6 +90,9 @@ export function AddServicesDialog({ listName }: { listName?: string }) {
       } finally {
         if (!abort.signal.aborted) {
           setIsLoading(false);
+          setError(
+            (prev) => prev || "Failed to load services. Please try again.",
+          );
         }
       }
     };
@@ -124,19 +130,33 @@ export function AddServicesDialog({ listName }: { listName?: string }) {
   async function handleAdd() {
     if (selected.size === 0) return;
 
-    setIsPending(true);
-    setError(null);
+    startTransition(async () => {
+      if (!activeListId) {
+        toast.info("Please select a list to add items to.");
+        return;
+      }
 
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Items added successfully");
-      setOpen(false);
-      reset();
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setIsPending(false);
-    }
+      setError(null);
+
+      try {
+        const itemsKeys = [...selected.keys()];
+        const { message, state } = await addWishlistItem({
+          wishlistId: activeListId,
+          items: itemsKeys,
+        });
+
+        if (state === "error") {
+          toast.error(message);
+          return;
+        }
+
+        toast.success(message ?? "Items added successfully");
+        setOpen(false);
+        refresh();
+      } catch {
+        setError("Something went wrong. Please try again.");
+      }
+    });
   }
 
   return (
@@ -260,9 +280,9 @@ export function AddServicesDialog({ listName }: { listName?: string }) {
                       className={cn(
                         "group flex items-center gap-3 p-3 transition-colors",
                         isSaved
-                          ? "cursor-not-allowed opacity-60"
+                          ? "cursor-not-allowed opacity-50"
                           : "cursor-pointer hover:bg-muted/50",
-                        isChecked && "bg-primary/5",
+                        isChecked && "bg-emerald-500/10 hover:bg-emerald-500/15",
                       )}
                     >
                       <Checkbox
@@ -316,7 +336,9 @@ export function AddServicesDialog({ listName }: { listName?: string }) {
           )}
         </ScrollArea>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className="p-2 rounded-md bg-destructive/10">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+        </div>
 
         <DialogFooter className="flex-row items-center justify-between sm:justify-between">
           <span className="text-sm text-muted-foreground">
@@ -353,25 +375,5 @@ export function AddServicesDialog({ listName }: { listName?: string }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function LoadingUI() {
-  return (
-    <div className="flex items-center gap-3 p-3">
-      <Skeleton className="size-4 shrink-0 rounded-sm" />
-
-      <Skeleton className="size-10 shrink-0 rounded-md" />
-
-      <div className="min-w-0 flex-1 space-y-2">
-        <Skeleton className="h-4 w-2/5" />
-
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3 w-12" />
-          <Skeleton className="size-1 rounded-full" />
-          <Skeleton className="h-3 w-14" />
-        </div>
-      </div>
-    </div>
   );
 }
