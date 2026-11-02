@@ -12,7 +12,7 @@ const userWishList = async () => {
     );
   }
 
-  const key = generateKey("wishlists", session.user.id, "*");
+  const key = generateKey("wishlist", "user", session.user.id);
   const cache = await getCache(key);
   if (cache) {
     return cache;
@@ -38,7 +38,7 @@ const listItems = async (listId: string) => {
   }
 
   const res = await userService.getListItems(listId);
-  await setCache(key, res, 3600);
+  await setCache(key, res, 2000);
   return res;
 };
 
@@ -59,7 +59,7 @@ const listServices = async (url: URL) => {
   const limit = params.get("limit");
 
   try {
-    const key = generateKey("wishlists", "services");
+    const key = generateKey("wishlist", "services");
 
     const cache = await getCache(key);
     if (cache && !search) {
@@ -71,7 +71,7 @@ const listServices = async (url: URL) => {
       limit ? parseInt(limit) : 10,
     );
 
-    if (!search) await setCache(key, res, 3600);
+    if (!search) await setCache(key, res, 2000);
 
     return res;
   } catch (error) {

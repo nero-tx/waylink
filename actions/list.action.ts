@@ -47,7 +47,7 @@ export const createList = async (dataForm: WishlistFormValues) => {
     })
     .returning();
 
-  await delCache(generateKey("wishlists", session.user.id, "*"));
+  await delCache(generateKey("wishlist", "user", session.user.id));
 
   return {
     message: "List created successfully",
@@ -81,7 +81,7 @@ export const removeList = async (listId: string) => {
     return { state: "error", message: "Not found or no permission" };
 
   await invalidateCache([
-    generateKey("wishlists", session.user.id, "*"),
+    generateKey("wishlist", "user", session.user.id),
     generateKey("wishlist", listId, "items"),
   ]);
 
@@ -119,7 +119,7 @@ export const updateList = async (id: string, data: WishlistFormValues) => {
   if (updated.length === 0)
     return { state: "error", message: "Not found or no permission" };
 
-  await delCache(generateKey("wishlists", session.user.id, "*"));
+  await delCache(generateKey("wishlist", "user", session.user.id));
 
   return {
     state: "success",
@@ -168,7 +168,10 @@ export const deleteItem = async (listId: string, id: string) => {
     };
   }
 
-  await delCache(generateKey("wishlist", deleted[0].wishlistId, "items"));
+  await invalidateCache([
+    generateKey("wishlist", deleted[0].wishlistId, "items"),
+    generateKey("wishlist", "user", session.user.id),
+  ]);
 
   return {
     state: "success",
@@ -322,11 +325,14 @@ export async function addWishlistItem(input: {
     after(() =>
       invalidateCache([
         generateKey("wishlist", wishlistId, "items"),
-        generateKey("wishlists", userId, "*"),
+        generateKey("wishlist", "user", userId),
       ]),
     );
 
-    return { state: "success", message: `Added ${inserted.length} items successfully` };
+    return {
+      state: "success",
+      message: `Added ${inserted.length} items successfully`,
+    };
   }
 
   return {

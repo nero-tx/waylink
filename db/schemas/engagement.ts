@@ -26,7 +26,6 @@ export const wishlists = pgTable(
   },
   (t) => [
     index("wishlist_user_idx").on(t.userId),
-    uniqueIndex("wishlist_user_name_idx").on(t.userId, t.name),
   ],
 );
 
@@ -49,6 +48,8 @@ export const wishlistItems = pgTable(
   (t) => [
     index("wishlist_item_wishlist_idx").on(t.wishlistId),
     index("wishlist_item_item_idx").on(t.itemType, t.itemId),
+    // prevent duplicated items
+    uniqueIndex("wishlist_item_unique_idx").on(t.wishlistId, t.itemId),
   ],
 );
 

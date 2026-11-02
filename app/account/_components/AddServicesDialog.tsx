@@ -90,9 +90,6 @@ export function AddServicesDialog({ listName }: { listName?: string }) {
       } finally {
         if (!abort.signal.aborted) {
           setIsLoading(false);
-          setError(
-            (prev) => prev || "Failed to load services. Please try again.",
-          );
         }
       }
     };
