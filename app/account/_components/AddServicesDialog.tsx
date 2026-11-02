@@ -147,7 +147,11 @@ export function AddServicesDialog({ listName }: { listName?: string }) {
           return;
         }
 
-        toast.success(message ?? "Items added successfully");
+        if (state === "info") {
+          toast.info(message);
+        } else {
+          toast.success(message ?? "Items added successfully");
+        }
         setOpen(false);
         refresh();
       } catch {

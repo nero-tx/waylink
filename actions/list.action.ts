@@ -251,7 +251,7 @@ export async function addWishlistItem(input: {
   wishlistId: string;
   items: string[];
 }): Promise<{
-  state: "success" | "error";
+  state: "success" | "error" | "info";
   message: string;
 }> {
   const [guard, session] = await Promise.all([
@@ -336,7 +336,7 @@ export async function addWishlistItem(input: {
   }
 
   return {
-    state: "success",
+    state: "info",
     message: "All selected items are already in this list",
   };
 }
