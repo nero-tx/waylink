@@ -9,9 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { WishlistFormValues } from "@/validations";
 import { WishlistFormDialog } from "../_components/WishlistFormDialog";
 import {
-  CardSkeleton,
-  EmptyList,
-  ItemCard,
   ListDeleteAlert,
   MobileListDropdown,
   NoListSelected,
@@ -20,6 +17,7 @@ import {
 } from "../_components/WishList";
 import { useWishlists } from "@/hooks/useWishlist";
 import { AddServicesDialog } from "../_components/AddServicesDialog";
+import { WishlistView, ViewSkeleton } from "../_components/WishlistView";
 
 export default function WishlistPage() {
   const {
@@ -271,17 +269,7 @@ export default function WishlistPage() {
                 <NoListSelected />
               </motion.div>
             ) : itemsState === "loading" ? (
-              <motion.div
-                key="loading-items"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
-              >
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <CardSkeleton key={i} />
-                ))}
-              </motion.div>
+              <ViewSkeleton />
             ) : itemsState === "error" ? (
               <motion.div
                 key="items-error"
@@ -302,16 +290,6 @@ export default function WishlistPage() {
                   </p>
                 </div>
               </motion.div>
-            ) : itemsState === "empty" ? (
-              <motion.div
-                key="empty-list"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="h-full"
-              >
-                <EmptyList color={activeList.color} />
-              </motion.div>
             ) : (
               <motion.div
                 key={activeList.id}
@@ -319,25 +297,12 @@ export default function WishlistPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
               >
-                <AnimatePresence>
-                  {wishlistItems.map((item, i) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 12 }}
-                      transition={{ duration: 0.2, delay: i * 0.05 }}
-                    >
-                      <ItemCard
-                        item={item}
-                        onRemove={handleDeleteItem}
-                        onEditNote={handleUpdateNote}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                <WishlistView
+                  items={wishlistItems}
+                  onRemove={handleDeleteItem}
+                  onEditNote={handleUpdateNote}
+                />
               </motion.div>
             )}
           </AnimatePresence>

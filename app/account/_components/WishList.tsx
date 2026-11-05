@@ -10,13 +10,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  ServiceListItem,
-  ServiceType,
-  Wishlist,
-  WishlistItem,
-} from "@/lib/all-types";
-import { displayMedia, normalizeLocation } from "@/lib/helpers";
+import { Wishlist } from "@/lib/all-types";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -26,16 +20,12 @@ import {
   Heart,
   Lock,
   LockOpen,
-  MapPin,
   Plus,
   RefreshCcw,
   SlidersHorizontal,
-  Star,
-  StickyNote,
   Trash2,
-  X,
 } from "lucide-react";
-import { ComponentProps, KeyboardEvent, useEffect, useState } from "react";
+import { ComponentProps, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,17 +35,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AddServicesDialog } from "./AddServicesDialog";
 import { useWishlistStore } from "@/stores/wishlist.store";
-
-const TYPE_CONFIG: Record<ServiceType, { label: string; color: string }> = {
-  experience: {
-    label: "experience",
-    color: "#e8734a",
-  },
-  transport: {
-    label: "transport",
-    color: "#5b8cf5",
-  },
-};
 
 type ListDeleteAlertProps = {
   open: boolean;
@@ -384,177 +363,6 @@ export function WishlistSidebarCard({
   );
 }
 
-export function ItemCard({
-  item,
-  onRemove,
-  onEditNote,
-}: {
-  item: WishlistItem;
-  onRemove: (id: string) => void;
-  onEditNote: (id: string, note: string) => void | Promise<void>;
-}) {
-  const tc = TYPE_CONFIG[item.itemType];
-  const [editingNote, setEditingNote] = useState(false);
-  const [noteVal, setNoteVal] = useState(item.notes ?? "");
-
-  useEffect(() => {
-    if (!editingNote) {
-      setNoteVal(item.notes ?? "");
-    }
-  }, [item.notes, editingNote]);
-
-  const saveNote = async () => {
-    const trimmed = noteVal.trim();
-
-    if (trimmed === (item.notes ?? "")) {
-      setEditingNote(false);
-      return;
-    }
-
-    await onEditNote(item.id, trimmed);
-    setEditingNote(false);
-  };
-
-  const cancelEdit = () => {
-    setNoteVal(item.notes ?? "");
-    setEditingNote(false);
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") saveNote();
-    if (e.key === "Escape") cancelEdit();
-  };
-
-  const { cover } = displayMedia(item.media);
-  const { to } = normalizeLocation(item.locations);
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 12, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.97 }}
-      transition={{ duration: 0.22, ease: "easeOut" }}
-      className="group relative rounded-xl border border-border overflow-hidden bg-card backdrop-blur-sm transition-all duration-300 drop-shadow-xl flex flex-col"
-    >
-      <div className="relative h-40 overflow-hidden bg-accent/20 shrink-0">
-        {cover ? (
-          <img
-            src={cover}
-            alt={item.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Heart className="w-8 h-8 text-muted-foreground/20" />
-          </div>
-        )}
-
-        <div
-          className="absolute inset-0 transition duration-300"
-          style={{
-            background: "linear-gradient(135deg, #FF6B3522, #FF6B3508)",
-          }}
-        />
-
-        <span
-          className="absolute top-2.5 bg-black left-2.5 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-lg backdrop-blur-lg border"
-          style={{
-            color: tc.color,
-            borderColor: `${tc.color}30`,
-          }}
-        >
-          {tc.label}
-        </span>
-
-        <button
-          onClick={() => onRemove(item.id)}
-          className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 cursor-pointer backdrop-blur-sm"
-          style={{ background: "rgba(0,0,0,0.6)" }}
-        >
-          <X size={13} className="text-white" />
-        </button>
-      </div>
-
-      <div className="p-4 flex flex-col gap-2 flex-1">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground leading-snug">
-            {item.title}
-          </h3>
-          <div className="flex items-center gap-1 mt-1 text-muted-foreground">
-            <MapPin className="w-3 h-3 shrink-0" />
-            <span className="text-xs truncate">
-              {to?.city && to?.country ? (
-                <span>
-                  {to.city}, {to.country}
-                </span>
-              ) : (
-                <span className="underline underline-offset-2">
-                  Not Detected
-                </span>
-              )}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/40">
-          <div className="flex items-center gap-1">
-            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-            <span className="text-xs font-medium text-foreground">
-              {item.avgRate}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              ({item.reviews})
-            </span>
-          </div>
-          <span className="text-sm font-bold text-foreground">
-            ${item.basePrice}
-            <span className="text-xs font-normal text-muted-foreground">
-              /person
-            </span>
-          </span>
-        </div>
-
-        <div className="mt-1">
-          {editingNote ? (
-            <div className="flex gap-1.5">
-              <input
-                autoFocus
-                value={noteVal}
-                onChange={(e) => setNoteVal(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Add a note…"
-                className="flex-1 text-xs rounded-lg px-2.5 py-1.5 border border-border bg-accent/40 text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-border/80 transition"
-              />
-              <button
-                onClick={saveNote}
-                className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 hover:bg-emerald-500/25 transition cursor-pointer"
-              >
-                Save
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setEditingNote(true)}
-              className={cn(
-                "w-full flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all duration-150 text-left cursor-pointer",
-                item.notes
-                  ? "border-border/50 text-muted-foreground hover:border-border hover:bg-accent/30"
-                  : "border-dashed border-border/40 text-muted-foreground/50 hover:border-border/60 hover:text-muted-foreground",
-              )}
-            >
-              <StickyNote className="w-3 h-3 shrink-0" />
-              <span className={cn("truncate", item.notes && "italic")}>
-                {item.notes ?? "Add a note…"}
-              </span>
-            </button>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 export function NoListSelected() {
   return (
     <motion.div
@@ -598,44 +406,6 @@ export function EmptyList({ color }: { color: string }) {
   );
 }
 
-export function CardSkeleton() {
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 12, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.97 }}
-      transition={{ duration: 0.22, ease: "easeOut" }}
-      className="group relative rounded-xl border border-border overflow-hidden bg-card backdrop-blur-sm transition-all duration-300 drop-shadow-xl flex flex-col"
-    >
-      <div className="relative h-40 overflow-hidden bg-accent/20 shrink-0 flex items-center justify-center">
-        <Skeleton className="w-full h-full" />
-      </div>
-
-      <div className="p-4 flex flex-col gap-2 flex-1">
-        <div>
-          <Skeleton className="h-4 w-3/4 mb-1" />
-          <div className="flex items-center gap-1 mt-1">
-            <Skeleton className="h-3 w-20" />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/40">
-          <div className="flex items-center gap-1">
-            <Skeleton className="h-3 w-6" />
-            <Skeleton className="h-3 w-8" />
-          </div>
-          <Skeleton className="h-4 w-16" />
-        </div>
-
-        <div className="mt-1">
-          <Skeleton className="h-8 w-full rounded-lg" />
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 export function ListDeleteAlert({
   open,
   onOpenChange,
@@ -658,12 +428,7 @@ export function ListDeleteAlert({
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel
-            disabled={loading}
-            // className="border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800"
-          >
-            Cancel
-          </AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
 
           <AlertDialogAction
             disabled={loading}

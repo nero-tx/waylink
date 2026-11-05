@@ -186,18 +186,19 @@ export const useWishlists = () => {
     fetchItems();
 
     return () => controller.abort();
-  }, [activeListId ,refreshKey]);
+  }, [activeListId, refreshKey]);
 
   const handleDeleteItem = async (itemId: string) => {
     if (!activeListId) return;
 
     const listId = activeListId;
+    const toastId = toast.loading("Deleting item...");
 
     try {
       const res = await deleteItem(listId, itemId);
 
       if (res.state === "error") {
-        toast.error(res.message);
+        toast.error(res.message, { id: toastId });
         return;
       }
 
@@ -215,9 +216,11 @@ export const useWishlists = () => {
 
       setItemsState(remainingItems.length ? "data" : "empty");
 
-      toast.success(res.message);
+      toast.success(res.message, { id: toastId });
     } catch {
-      toast.error("Failed to delete wishlist item");
+      toast.error("Failed to delete wishlist item", {
+        id: toastId,
+      });
     }
   };
 

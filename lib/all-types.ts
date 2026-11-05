@@ -191,13 +191,10 @@ export interface WishlistItem {
   notes: string | null;
   productId: string;
   title: string;
-  basePrice: number;
-  type: "experience" | "transport";
   reviews: number;
   bookings: number;
   avgRate: number;
   media: Media[];
-  locations: Location[];
 }
 
 export type NotificationType =

@@ -1,6 +1,5 @@
 import { db } from "@/db";
 import {
-  location,
   productMedia,
   products,
   productScores,
@@ -16,26 +15,28 @@ import {
   count,
   desc,
   eq,
-  getTableColumns,
-  inArray,
-  ne,
   or,
+  getTableColumns,
   sql,
 } from "drizzle-orm";
+
+const cover = db
+  .select({
+    productId: productMedia.productId,
+    media: sql<Media[]>`jsonb_agg(to_jsonb(${productMedia}))`.as("media"),
+  })
+  .from(productMedia)
+  .where(or(eq(productMedia.type, "image"), eq(productMedia.isCover, true)))
+  .groupBy(productMedia.productId)
+  .limit(2)
+  .as("cover");
 
 async function getUserWishlists(userId: string) {
   if (!userId) throw new Error("User id is required.");
 
   const wishlistsWithCount = await db
     .select({
-      id: wishlists.id,
-      name: wishlists.name,
-      description: wishlists.description,
-      color: wishlists.color,
-      isPrivate: wishlists.isPrivate,
-      userId: wishlists.userId,
-      createdAt: wishlists.createdAt,
-      updatedAt: wishlists.updatedAt,
+      ...getTableColumns(wishlists),
       totalItems: count(wishlistItems.id),
     })
     .from(wishlists)
@@ -47,45 +48,27 @@ async function getUserWishlists(userId: string) {
 }
 
 async function getListItems(listId: string) {
-  const { ...item } = getTableColumns(wishlistItems);
   const itemsQuery = db
     .select({
-      ...item,
+      ...getTableColumns(wishlistItems),
       productId: wishlistItems.itemId,
       title: products.title,
-      basePrice: products.basePrice,
-      type: products.type,
       reviews: productStats.reviewsCount,
       bookings: productStats.bookingsCount,
-      avgRate: productStats.averageRating,
-      media: sql<Media[]>`coalesce(
-        json_agg(distinct to_jsonb(${productMedia})) filter (where ${productMedia.id} is not null),
-        '[]'::json
-      )`,
-      locations: sql<Location[]>`coalesce(
-        json_agg(distinct to_jsonb(${location})) filter (where ${location.id} is not null),
-        '[]'::json
-      )`,
+      avgRate: sql<number>`coalesce(${productStats.averageRating}, 0)`.mapWith(
+        Number,
+      ),
+      media: cover.media,
     })
     .from(wishlistItems)
     .leftJoin(products, eq(wishlistItems.itemId, products.id))
     .leftJoin(productStats, eq(products.id, productStats.productId))
-    .leftJoin(productMedia, eq(products.id, productMedia.productId))
-    .leftJoin(location, eq(products.id, location.productId))
+    .leftJoin(cover, eq(cover.productId, products.id))
     .where(eq(wishlistItems.wishlistId, listId))
-    .groupBy(
-      wishlistItems.id,
-      wishlistItems.itemId,
-      products.title,
-      products.basePrice,
-      products.type,
-      productStats.reviewsCount,
-      productStats.bookingsCount,
-      productStats.averageRating,
-    );
+    .orderBy(desc(wishlistItems.id));
 
   const countQuery = db
-    .select({ total: sql<number>`count(*)::int` })
+    .select({ total: count() })
     .from(wishlistItems)
     .where(eq(wishlistItems.wishlistId, listId));
 
@@ -107,15 +90,6 @@ const listServices = async (
   limit: number,
 ): Promise<ServiceListItem[]> => {
   const searchQuery = buildSearchQuery(products.searchVector, search, "fts");
-  const cover = db
-    .select({
-      productId: productMedia.productId,
-      media: sql<Media>`to_jsonb(${productMedia})`.as("media"),
-    })
-    .from(productMedia)
-    .where(and(eq(productMedia.type, "image"), eq(productMedia.isCover, true)))
-    .limit(1)
-    .as("cover");
 
   const rows = await db
     .select({
@@ -135,7 +109,7 @@ const listServices = async (
 
   return rows.map(({ coverMedia, ...service }) => ({
     ...service,
-    media: coverMedia ? [coverMedia] : [],
+    media: coverMedia,
   }));
 };
 
