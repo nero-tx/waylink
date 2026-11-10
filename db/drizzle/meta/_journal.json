@@ -113,6 +113,13 @@
       "when": 1793579916925,
       "tag": "0015_famous_black_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794341610258,
+      "tag": "0016_parched_vance_astro",
+      "breakpoints": true
     }
   ]
 }

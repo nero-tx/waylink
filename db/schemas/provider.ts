@@ -135,3 +135,44 @@ export const providerStats = pgTable(
     index("provider_stats_rating_idx").on(t.avgRating),
   ],
 );
+
+/**
+ * Audit trail + moderation notes for provider status changes.
+ * One row per status action (e.g. admin rejects a provider and leaves
+ * a note explaining why plus what the provider should do to fix it).
+ * `providers.status` stays the source of truth for the CURRENT status;
+ * this table is the history.
+ */
+export const providerStatusLogs = pgTable(
+  "provider_status_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    providerId: uuid("provider_id")
+      .notNull()
+      .references(() => providers.id, { onDelete: "cascade" }),
+    fromStatus: providerStatusEnum("from_status"),
+    toStatus: providerStatusEnum("to_status").notNull(),
+
+    // Why it happened (admin-facing) and how to fix it
+    notes: text("notes"),
+    suggestedSolution: text("suggested_solution"),
+
+    // Who did it (admin role)
+    actorId: text("actor_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    resolvedAt: timestamp("resolved_at"),
+    resolvedBy: text("resolved_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+
+    ...timestamps,
+  },
+  (t) => [
+    index("provider_status_log_provider_idx").on(t.providerId, t.createdAt),
+    index("provider_status_log_to_status_idx").on(t.toStatus),
+    index("provider_status_log_actor_idx").on(t.actorId),
+    index("provider_status_log_resolved_idx").on(t.resolvedAt),
+  ],
+);
