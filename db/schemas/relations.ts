@@ -15,6 +15,7 @@ import {
   providerMembers,
   providers,
   providerStats,
+  providerStatusLogs,
 } from "./provider";
 import { location } from "./shared";
 import { plans, subscriptions } from "./plan";
@@ -40,6 +41,13 @@ export const userRelations = relations(user, ({ one, many }) => ({
   }),
   wishlists: many(wishlists),
   financials: many(bookingsFinancial),
+  statusLogsCreated: many(providerStatusLogs, {
+    relationName: "statusLogActor",
+  }),
+
+  statusLogsResolved: many(providerStatusLogs, {
+    relationName: "statusLogResolver",
+  }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -74,6 +82,7 @@ export const providerRelations = relations(providers, ({ one, many }) => ({
     references: [providerStats.providerId],
   }),
   financials: many(bookingsFinancial),
+  logs: many(providerStatusLogs),
 }));
 
 export const providerMemberRelations = relations(
@@ -338,6 +347,31 @@ export const bookingsFinancialRelations = relations(
     plan: one(plans, {
       fields: [bookingsFinancial.planId],
       references: [plans.id],
+    }),
+  }),
+);
+
+// ============================================
+// PROVIDER LOGS RELATIONS
+// ============================================
+export const providerStatusLogsRelations = relations(
+  providerStatusLogs,
+  ({ one }) => ({
+    provider: one(providers, {
+      fields: [providerStatusLogs.providerId],
+      references: [providers.id],
+    }),
+
+    actor: one(user, {
+      fields: [providerStatusLogs.actorId],
+      references: [user.id],
+      relationName: "statusLogActor",
+    }),
+
+    resolver: one(user, {
+      fields: [providerStatusLogs.resolvedBy],
+      references: [user.id],
+      relationName: "statusLogResolver",
     }),
   }),
 );

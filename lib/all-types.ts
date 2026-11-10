@@ -567,3 +567,20 @@ export type ServiceListItem = {
   status: "active" | "draft" | "paused" | "archived";
   media?: Media[];
 };
+
+export interface ProviderStatusLog {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  providerId: string;
+  fromStatus: ProviderStatus | null;
+  toStatus: ProviderStatus;
+  notes: string | null;
+  suggestedSolution: string | null;
+  actorId: string | null;
+  resolvedAt: Date | string | null;
+  resolvedBy: Date | string | null;
+  provider: Provider;
+  actor: Pick<User, "id" | "name" | "email" | "image"> | null;
+  resolver: Pick<User, "id" | "name" | "email" | "image"> | null;
+}
