@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   CircleCheck,
@@ -17,8 +17,10 @@ import { Provider, ProviderStatusLog } from "@/lib/all-types";
 import Image from "next/image";
 import { initials } from "@/lib/helpers";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type BlockedStatus = "pending" | "inactive" | "suspended" | "rejected";
+type Role = "owner" | "manager" | "staff" | null;
 
 const COPY: Record<
   BlockedStatus,
@@ -80,21 +82,16 @@ export const mockProviderStatusLog: ProviderStatusLog = {
   },
 };
 
-interface ProviderStatusGateProps {
-  provider: Provider;
-  statusLog?: ProviderStatusLog | null;
-  isOwner?: boolean;
-  supportHref?: string;
-}
-
 export function ProviderStatusGate({
   provider,
-  statusLog = mockProviderStatusLog,
-  isOwner = false,
-  supportHref = "/support",
-}: ProviderStatusGateProps) {
+  role = null,
+}: {
+  provider: Provider;
+  role: Role;
+}) {
   const router = useRouter();
   const [checking, startCheck] = useTransition();
+  const [statusLog, setStatusLog] = useState<ProviderStatusLog | null>(null);
 
   if (provider.status === "approved") return null;
 
@@ -109,6 +106,8 @@ export function ProviderStatusGate({
   const suggestedSolution = statusLog?.suggestedSolution;
   const decidedAt = statusLog?.updatedAt;
   const color = generateColor(provider.name);
+console.log(provider)
+  const canManage = role === "owner" || role === "manager";
 
   return (
     <div className="flex h-full items-center justify-center px-4 md:px-6 py-6">
@@ -273,7 +272,7 @@ export function ProviderStatusGate({
           </div>
         )}
 
-        {!isOwner && status !== "pending" && (
+        {!canManage && status !== "pending" && (
           <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-amber-700 dark:text-amber-400">
             <ShieldAlert className="mt-1 size-4.5 shrink-0" />
 
@@ -295,8 +294,70 @@ export function ProviderStatusGate({
           </Button>
 
           <Button variant="outline" asChild>
-            <a href={supportHref}>Contact support</a>
+            <Link href="/support">Contact support</Link>
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProviderStatusGateSkeleton() {
+  return (
+    <div className="flex h-full items-center justify-center px-4 py-6 md:px-6">
+      <div className="w-full max-w-3xl space-y-6">
+        <div className="flex items-start gap-4">
+          <Skeleton className="size-16 shrink-0 rounded-xl" />
+
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-full max-w-lg" />
+          </div>
+        </div>
+
+        <div className="flex items-start gap-4">
+          <Skeleton className="size-12 shrink-0 rounded-full" />
+
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-7 w-64 max-w-full" />
+            <Skeleton className="h-4 w-full max-w-xl" />
+            <Skeleton className="h-4 w-3/4 max-w-md" />
+          </div>
+        </div>
+
+        <div className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div
+              key={index}
+              className={cn("space-y-2", index === 4 && "sm:col-span-2")}
+            >
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-4 w-40 max-w-full" />
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-5 rounded-lg border p-5">
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-16 w-full rounded-md" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-16 w-full rounded-md" />
+          </div>
+          <Skeleton className="h-3 w-28" />
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Skeleton className="h-10 w-full sm:w-40" />
+          <Skeleton className="h-10 w-full sm:w-36" />
         </div>
       </div>
     </div>

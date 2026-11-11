@@ -70,7 +70,7 @@ export default async function ProviderLayout({
                     {provider.status === "approved" ? (
                       <>{children}</>
                     ) : (
-                      <ProviderStatusGate provider={provider} />
+                      <ProviderStatusGate provider={provider} role={role}/>
                     )}
                   </main>
                 </SidebarInset>
