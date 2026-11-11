@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+// @ts-expect-error Next.js processes global CSS imports.
 import "../globals.css";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -10,6 +11,7 @@ import { ProviderHeader } from "./_components/Sidebar";
 import { getCurrentProvider } from "@/lib/provider-auth";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/require-role";
+import { ProviderStatusGate } from "./_components/ProviderStatusGate";
 
 export const metadata: Metadata = {
   title: "Provider Dashboard | Waylink Travel & Experiences",
@@ -28,7 +30,7 @@ export default async function ProviderLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["provider"] ,"/unauthorized");
+  await requireRole(["provider"], "/unauthorized");
   const { status, provider, role, user } = await getCurrentProvider();
 
   if (!provider || !user) {
@@ -64,7 +66,13 @@ export default async function ProviderLayout({
                 <ProviderSidebar />
                 <SidebarInset className="flex flex-col min-w-0 flex-1">
                   <ProviderHeader />
-                  <main className="flex-1 w-full relative">{children}</main>
+                  <main className="flex-1 w-full relative">
+                    {provider.status === "approved" ? (
+                      <>{children}</>
+                    ) : (
+                      <ProviderStatusGate provider={provider} />
+                    )}
+                  </main>
                 </SidebarInset>
               </div>
             </SidebarProvider>

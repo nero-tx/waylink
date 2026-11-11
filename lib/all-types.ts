@@ -580,7 +580,7 @@ export interface ProviderStatusLog {
   actorId: string | null;
   resolvedAt: Date | string | null;
   resolvedBy: Date | string | null;
-  provider: Provider;
-  actor: Pick<User, "id" | "name" | "email" | "image"> | null;
-  resolver: Pick<User, "id" | "name" | "email" | "image"> | null;
+  provider?: Provider;
+  actor?: Pick<User, "id" | "name" | "email" | "image">;
+  resolver?: Pick<User, "id" | "name" | "email" | "image">;
 }
