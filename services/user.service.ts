@@ -10,15 +10,7 @@ import {
 } from "@/db/schemas";
 import { Location, Media, ServiceListItem } from "@/lib/all-types";
 import { buildSearchQuery, mergeWhere } from "@/lib/query_parser/helpers";
-import {
-  and,
-  count,
-  desc,
-  eq,
-  or,
-  getTableColumns,
-  sql,
-} from "drizzle-orm";
+import { and, count, desc, eq, or, getTableColumns, sql } from "drizzle-orm";
 
 const cover = db
   .select({
@@ -80,6 +72,15 @@ async function getListItems(listId: string) {
 const getUserProvider = async (userId: string) => {
   const provider = await db.query.providers.findFirst({
     where: eq(providers.ownerId, userId),
+    with: {
+      logs: {
+        limit: 1,
+        where(log, { isNull }) {
+          isNull(log.resolvedAt);
+        },
+        orderBy: (log, { desc }) => [desc(log.createdAt)],
+      },
+    },
   });
 
   return provider;
