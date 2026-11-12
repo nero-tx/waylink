@@ -584,3 +584,21 @@ export interface ProviderStatusLog {
   actor?: Pick<User, "id" | "name" | "email" | "image">;
   resolver?: Pick<User, "id" | "name" | "email" | "image">;
 }
+
+export type SupportCategory =
+  | "account"
+  | "provider_status"
+  | "booking"
+  | "billing"
+  | "listing"
+  | "technical"
+  | "other";
+
+export type SupportStatus =
+  | "open"
+  | "in_progress"
+  | "waiting_on_customer"
+  | "resolved"
+  | "closed";
+
+export type SupportPriority = "low" | "normal" | "high" | "urgent";

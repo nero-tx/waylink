@@ -21,7 +21,12 @@ import { location } from "./shared";
 import { plans, subscriptions } from "./plan";
 import { experiences, itineraries } from "./experience";
 import { transports, transportSchedules } from "./transport";
-import { wishlistItems, wishlists } from "./engagement";
+import {
+  supportMessages,
+  supportTickets,
+  wishlistItems,
+  wishlists,
+} from "./engagement";
 
 export const userRelations = relations(user, ({ one, many }) => ({
   sessions: many(session),
@@ -372,6 +377,44 @@ export const providerStatusLogsRelations = relations(
       fields: [providerStatusLogs.resolvedBy],
       references: [user.id],
       relationName: "statusLogResolver",
+    }),
+  }),
+);
+
+// ============================================
+// SUPPORT RELATIONS
+// ============================================
+export const supportTicketsRelations = relations(
+  supportTickets,
+  ({ one, many }) => ({
+    user: one(user, {
+      fields: [supportTickets.userId],
+      references: [user.id],
+      relationName: "ticket_user",
+    }),
+    assignee: one(user, {
+      fields: [supportTickets.assigneeId],
+      references: [user.id],
+      relationName: "ticket_assignee",
+    }),
+    provider: one(providers, {
+      fields: [supportTickets.providerId],
+      references: [providers.id],
+    }),
+    messages: many(supportMessages),
+  }),
+);
+
+export const supportMessagesRelations = relations(
+  supportMessages,
+  ({ one }) => ({
+    ticket: one(supportTickets, {
+      fields: [supportMessages.ticketId],
+      references: [supportTickets.id],
+    }),
+    author: one(user, {
+      fields: [supportMessages.authorId],
+      references: [user.id],
     }),
   }),
 );
