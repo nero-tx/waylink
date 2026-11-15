@@ -421,3 +421,52 @@ export function generateColor(text: string): GeneratedColor {
     },
   };
 }
+
+type TimeUnit = "min" | "h" | "d" | "w" | "m" | "y";
+
+type Period = `${number}${TimeUnit}`;
+type CompareMode = "exact" | "within";
+
+const TIME_UNITS: Record<TimeUnit, number> = {
+  min: 60 * 1000,
+  h: 60 * 60 * 1000,
+  d: 24 * 60 * 60 * 1000,
+  w: 7 * 24 * 60 * 60 * 1000,
+  m: 30 * 24 * 60 * 60 * 1000,
+  y: 365 * 24 * 60 * 60 * 1000,
+};
+
+export const compareDateRange = (
+  start: Date | string,
+  end: Date | string,
+  period: Period,
+  mode: CompareMode = "within",
+): boolean => {
+  const match = period.match(/^(\d+)(min|h|d|w|m|y)$/);
+
+  if (!match) return false;
+
+  const [, amount, unit] = match;
+
+  const startTime = new Date(start).getTime();
+  const endTime = new Date(end).getTime();
+
+  if (
+    !Number.isFinite(startTime) ||
+    !Number.isFinite(endTime) ||
+    endTime < startTime
+  ) {
+    return false;
+  }
+
+  const difference = endTime - startTime;
+  const expected = Number(amount) * TIME_UNITS[unit as TimeUnit];
+
+  return mode === "exact" ? difference === expected : difference <= expected;
+};
+
+export const formatTicketDate = (date: Date | string) => {
+  const now = new Date();
+
+  return compareDateRange(date, now, "1m") ? timeAgo(date) : fmtDate(date);
+};

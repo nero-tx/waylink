@@ -602,3 +602,32 @@ export type SupportStatus =
   | "closed";
 
 export type SupportPriority = "low" | "normal" | "high" | "urgent";
+
+export interface SupportTicket {
+  id: string;
+  ticketNumber: number;
+  userId: string;
+  status: SupportStatus;
+  providerId: string | null;
+  assigneeId: string | null;
+  category: SupportCategory;
+  subject: string;
+  priority: SupportPriority;
+  lastMessageAt: Date;
+  closedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  messageCount?: number;
+  hasStaffReply?: boolean;
+}
+
+export interface SupportMessage {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  ticketId: string;
+  authorId: string | null;
+  isStaff: boolean;
+  isInternal: boolean;
+  body: string;
+}
