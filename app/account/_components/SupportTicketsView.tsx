@@ -17,12 +17,10 @@ import {
   SupportFiltersState,
   type StatusFilter,
 } from "@/lib/support-filters";
-import {
-  SupportFilters,
-  SupportTicketRow,
-} from "./SupportElements";
+import { SupportFilters, SupportTicketRow } from "./SupportElements";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CreateTicketDialog } from "./CreateTicketDialog";
 
 export type SupportRole = "user" | "provider";
 
@@ -66,10 +64,7 @@ const DEFAULT_FILTERS: SupportFiltersState = {
   q: "",
 };
 
-export function SupportTicketsView({
-  role,
-  tickets,
-}: SupportTicketsViewProps) {
+export function SupportTicketsView({ role, tickets }: SupportTicketsViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -193,16 +188,19 @@ export function SupportTicketsView({
         ) : (
           <ul className="divide-y">
             {visibleTickets.map((ticket) => (
-              <SupportTicketRow
-                key={ticket.id}
-                ticket={ticket}
-              />
+              <SupportTicketRow key={ticket.id} ticket={ticket} />
             ))}
           </ul>
         )}
       </div>
 
-      {/* Adding Create Ticket Dialog Later */}
+      <CreateTicketDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSubmit={(payload) => console.log(payload)}
+        provider="ajsnc sa ic"
+        ticket={undefined}
+      />
     </div>
   );
 }
