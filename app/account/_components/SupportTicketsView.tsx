@@ -29,6 +29,8 @@ import {
   SupportTicketsError,
   SupportTicketsSkeleton,
 } from "./SupportElements";
+import { SupportTicketFormValues } from "@/validations/support";
+import { createSupportTicket } from "@/actions/support.action";
 
 export type SupportRole = "user" | "provider";
 
@@ -69,13 +71,26 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
 
   const apiUrl = useMemo(() => buildSupportTicketsUrl(urlParams), [urlParams]);
 
-  const { data, error, isLoading, isFetching, refetch } =
+  const { data, error, isLoading, isFetching, refetch, mutate } =
     useFetch<SupportTicketsResponse>(apiUrl);
-
-  console.log(data)
 
   const tickets = data?.tickets ?? [];
   const isRefreshing = !isLoading && (isFetching || isPending);
+
+  const handleCreate = async (values: SupportTicketFormValues) => {
+    const result = await createSupportTicket(role, values);
+    if (result.state === "error") throw new Error(result.message);
+
+    const ticket = result.data;
+    if (ticket) {
+      mutate((prev) => ({
+        ...prev,
+        tickets: [ticket, ...(prev?.tickets ?? [])],
+      }));
+    } else {
+      refetch();
+    }
+  };
 
   const body = error ? (
     <SupportTicketsError error={error} onRetry={refetch} />
@@ -134,7 +149,7 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
       <CreateTicketDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onSubmit={(payload) => console.log(payload)}
+        onSubmit={(payload) => handleCreate(payload)}
       />
     </div>
   );

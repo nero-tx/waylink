@@ -46,11 +46,17 @@ export function useFetch<T>(url: string | null) {
 
   const refetch = useCallback(() => setNonce((n) => n + 1), []);
 
+  const mutate = useCallback(
+    (updater: (prev: T | undefined) => T | undefined) => setData(updater),
+    [],
+  );
+
   return {
     data,
     error,
     isLoading: isFetching && data === undefined,
     isFetching,
     refetch,
+    mutate,
   };
 }
