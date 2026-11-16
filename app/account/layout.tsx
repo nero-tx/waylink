@@ -1,5 +1,6 @@
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import UserLayout from "./_components/MainLayout";
+// @ts-expect-error Next.js processes global CSS imports.
 import "../globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Geist, Geist_Mono } from "next/font/google";

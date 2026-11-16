@@ -7,10 +7,16 @@ import {
   providerMembers,
   providers,
   providerStats,
+  providerStatusLogs,
   user,
 } from "@/db/schemas";
 import { Invites, MembersRoles, ProviderMemebers } from "@/lib/admin-types";
-import { NotificationType, Provider, ProviderStatus } from "@/lib/all-types";
+import {
+  NotificationType,
+  Provider,
+  ProviderStatus,
+  ProviderStatusLog,
+} from "@/lib/all-types";
 import { ProviderStats } from "@/lib/panel-types";
 import { parseQuery } from "@/lib/query_parser/analyzer";
 import {
@@ -699,6 +705,42 @@ export async function setProviderMember(
   }
 }
 
+type LogRelations = {
+  provider?: boolean;
+  actor?: boolean;
+  resolver?: boolean;
+};
+type UserSummary = "id" | "name" | "email" | "image";
+type LogWithRelations<R extends LogRelations> =
+  typeof providerStatusLogs.$inferSelect &
+    (R extends { provider: true }
+      ? { provider: typeof providers.$inferSelect }
+      : {}) &
+    (R extends { actor: true } ? { actor: UserSummary | null } : {}) &
+    (R extends { resolver: true } ? { resolver: UserSummary | null } : {});
+
+const userColumns = { id: true, name: true, email: true, image: true } as const;
+
+async function getProviderStatusLog<const R extends LogRelations = {}>(
+  providerId: string,
+  relations?: R,
+): Promise<LogWithRelations<R> | null> {
+  const withRelations = {
+    ...(relations?.provider && { provider: true as const }),
+    ...(relations?.actor && { actor: { columns: userColumns } }),
+    ...(relations?.resolver && { resolver: { columns: userColumns } }),
+  };
+
+  const log = await db.query.providerStatusLogs.findFirst({
+    where: (logs, { and, eq, isNull }) =>
+      and(eq(logs.providerId, providerId), isNull(logs.resolvedAt)),
+    orderBy: (logs, { desc }) => [desc(logs.createdAt)],
+    with: withRelations,
+  });
+
+  return (log ?? null) as LogWithRelations<R> | null;
+}
+
 export const providerService = {
   getProviders,
   providerReviewState,
@@ -713,4 +755,5 @@ export const providerService = {
   removeMember,
   providerInvitesMembers,
   setProviderMember,
+  getProviderStatusLog,
 };

@@ -15,6 +15,7 @@ import {
   X,
   Home,
   Loader,
+  Headset,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -51,6 +52,12 @@ const NAV_ITEMS = [
     href: "/account/wish-list",
     icon: Heart,
     accent: "#ef4444",
+  },
+  {
+    label: "Support Center",
+    href: "/account/support",
+    icon: Headset,
+    accent: "#8B5CF6",
   },
   {
     label: "Explore Page",

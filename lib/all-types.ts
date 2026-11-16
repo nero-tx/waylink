@@ -567,3 +567,67 @@ export type ServiceListItem = {
   status: "active" | "draft" | "paused" | "archived";
   media?: Media[];
 };
+
+export interface ProviderStatusLog {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  providerId: string;
+  fromStatus: ProviderStatus | null;
+  toStatus: ProviderStatus;
+  notes: string | null;
+  suggestedSolution: string | null;
+  actorId: string | null;
+  resolvedAt: Date | string | null;
+  resolvedBy: Date | string | null;
+  provider?: Provider;
+  actor?: Pick<User, "id" | "name" | "email" | "image">;
+  resolver?: Pick<User, "id" | "name" | "email" | "image">;
+}
+
+export type SupportCategory =
+  | "account"
+  | "provider_status"
+  | "booking"
+  | "billing"
+  | "listing"
+  | "technical"
+  | "other";
+
+export type SupportStatus =
+  | "open"
+  | "in_progress"
+  | "waiting_on_customer"
+  | "resolved"
+  | "closed";
+
+export type SupportPriority = "low" | "normal" | "high" | "urgent";
+
+export interface SupportTicket {
+  id: string;
+  ticketNumber: number;
+  userId: string;
+  status: SupportStatus;
+  providerId: string | null;
+  assigneeId: string | null;
+  category: SupportCategory;
+  subject: string;
+  priority: SupportPriority;
+  lastMessageAt: Date;
+  closedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  messageCount?: number;
+  hasStaffReply?: boolean;
+}
+
+export interface SupportMessage {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  ticketId: string;
+  authorId: string | null;
+  isStaff: boolean;
+  isInternal: boolean;
+  body: string;
+}

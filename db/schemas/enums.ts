@@ -7,7 +7,7 @@ export const providerStatusEnum = pgEnum("provider_status", [
   "approved",
   "suspended",
   "inactive",
-  "rejected"
+  "rejected",
 ]);
 
 export const providerTypeEnum = pgEnum("provider_type", [
@@ -38,32 +38,32 @@ export const subscriptionStatusEnum = pgEnum("subscription_status", [
   "cancelled",
   "expired",
   "trialing",
-  "paused"
+  "paused",
 ]);
 
 export const productStatusEnum = pgEnum("product_status", [
   "draft",
-  "active", 
-  "paused", 
-  "archived",  
+  "active",
+  "paused",
+  "archived",
 ]);
 
 export const experienceTypeEnum = pgEnum("experience_type", [
-  "tour",           // City tours, walking tours, sightseeing
-  "adventure",      // Hiking, diving, paragliding, zip-lining
-  "cultural",       // Museums, cooking classes, workshops, traditions
-  "entertainment",  // Shows, concerts, theater, nightlife
-  "food_drink",     // Food tours, wine tasting, culinary experiences
-  "sports",         // Sports activities, games, fitness
-  "wellness",       // Spa, yoga, meditation, wellness retreats
-  "water",          // Snorkeling, boat tours, fishing, surfing
-  "wildlife",       // Safari, bird watching, animal encounters
-  "photography",    // Photo tours, photo workshops
-  "nature",         // National parks, hikes, eco-trips
-  "shopping",       // Local markets, shopping tours
-  "nightlife",      // Clubs, bars, night events
-  "learning",       // Classes, workshops, educational experiences
-  "seasonal",       // Festivals, seasonal events, holidays
+  "tour", // City tours, walking tours, sightseeing
+  "adventure", // Hiking, diving, paragliding, zip-lining
+  "cultural", // Museums, cooking classes, workshops, traditions
+  "entertainment", // Shows, concerts, theater, nightlife
+  "food_drink", // Food tours, wine tasting, culinary experiences
+  "sports", // Sports activities, games, fitness
+  "wellness", // Spa, yoga, meditation, wellness retreats
+  "water", // Snorkeling, boat tours, fishing, surfing
+  "wildlife", // Safari, bird watching, animal encounters
+  "photography", // Photo tours, photo workshops
+  "nature", // National parks, hikes, eco-trips
+  "shopping", // Local markets, shopping tours
+  "nightlife", // Clubs, bars, night events
+  "learning", // Classes, workshops, educational experiences
+  "seasonal", // Festivals, seasonal events, holidays
 ]);
 
 export const difficultyLevelEnum = pgEnum("difficulty_level", [
@@ -74,16 +74,16 @@ export const difficultyLevelEnum = pgEnum("difficulty_level", [
 ]);
 
 export const transportTypeEnum = pgEnum("transport_type", [
-  "bus",           // Long-distance buses, coaches
-  "flight",        // Airplanes
-  "train",         // Railways
-  "ferry",         // Boats, ferries
-  "cruise",        // Multi-day cruise ships
-  "car_rental",    // Rental cars
-  "shuttle",       // Airport/hotel shuttles
-  "taxi",          // Private taxis, ride-hailing
-  "private_van",   // Group transport, minibuses
-  "helicopter",    // Helicopter tours
+  "bus", // Long-distance buses, coaches
+  "flight", // Airplanes
+  "train", // Railways
+  "ferry", // Boats, ferries
+  "cruise", // Multi-day cruise ships
+  "car_rental", // Rental cars
+  "shuttle", // Airport/hotel shuttles
+  "taxi", // Private taxis, ride-hailing
+  "private_van", // Group transport, minibuses
+  "helicopter", // Helicopter tours
 ]);
 
 export const transportClassEnum = pgEnum("transport_class", [
@@ -95,16 +95,16 @@ export const transportClassEnum = pgEnum("transport_class", [
 ]);
 
 export const seatTypeEnum = pgEnum("seat_type", [
-  "standard",       // Regular seat
-  "reclining",      // Reclining seat
-  "semi_sleeper",   // Partial bed (bus)
-  "sleeper",        // Full bed (bus/train)
-  "bed",            // Cruise or hostel bed
-  "cabin",          // Private cabin (cruise/train)
-  "premium",        // Extra legroom
-  "vip",            // VIP / luxury seating
-  "window",         // Window preference
-  "aisle",          // Aisle preference
+  "standard", // Regular seat
+  "reclining", // Reclining seat
+  "semi_sleeper", // Partial bed (bus)
+  "sleeper", // Full bed (bus/train)
+  "bed", // Cruise or hostel bed
+  "cabin", // Private cabin (cruise/train)
+  "premium", // Extra legroom
+  "vip", // VIP / luxury seating
+  "window", // Window preference
+  "aisle", // Aisle preference
 ]);
 
 export const notificationTypeEnum = pgEnum("notification_type", [
@@ -119,7 +119,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "system_announcement",
   "system_warning",
   "promotion",
-  "general"
+  "general",
 ]);
 
 export const tsvector = customType<{ data: string }>({
@@ -137,7 +137,11 @@ export const timestamps = {
 };
 
 export const bookingStatusEnums = pgEnum("booking_status", [
-  "pending" , "confirmed" , "cancelled" , "completed","expired"
+  "pending",
+  "confirmed",
+  "cancelled",
+  "completed",
+  "expired",
 ]);
 
 export const recipientTypeEnum = pgEnum("recipient_type", [
@@ -147,7 +151,34 @@ export const recipientTypeEnum = pgEnum("recipient_type", [
 ]);
 
 export const businessTypeEnums = pgEnum("business_type", [
-  "individual" , "company" , "agency"
+  "individual",
+  "company",
+  "agency",
 ]);
 
-export const subscriptionTypeEnum = pgEnum("sub_type" ,["trial" , "paid"]);
+export const subscriptionTypeEnum = pgEnum("sub_type", ["trial", "paid"]);
+
+export const supportCategoryEnum = pgEnum("support_category", [
+  "provider_status",
+  "account",
+  "billing",
+  "listing",
+  "booking",
+  "technical",
+  "other",
+]);
+
+export const supportStatusEnum = pgEnum("support_status", [
+  "open",
+  "in_progress",
+  "waiting_on_customer",
+  "resolved",
+  "closed",
+]);
+
+export const supportPriorityEnum = pgEnum("support_priority", [
+  "low",
+  "normal",
+  "high",
+  "urgent",
+]);

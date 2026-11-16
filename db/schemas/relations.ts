@@ -15,12 +15,18 @@ import {
   providerMembers,
   providers,
   providerStats,
+  providerStatusLogs,
 } from "./provider";
 import { location } from "./shared";
 import { plans, subscriptions } from "./plan";
 import { experiences, itineraries } from "./experience";
 import { transports, transportSchedules } from "./transport";
-import { wishlistItems, wishlists } from "./engagement";
+import {
+  supportMessages,
+  supportTickets,
+  wishlistItems,
+  wishlists,
+} from "./engagement";
 
 export const userRelations = relations(user, ({ one, many }) => ({
   sessions: many(session),
@@ -40,6 +46,13 @@ export const userRelations = relations(user, ({ one, many }) => ({
   }),
   wishlists: many(wishlists),
   financials: many(bookingsFinancial),
+  statusLogsCreated: many(providerStatusLogs, {
+    relationName: "statusLogActor",
+  }),
+
+  statusLogsResolved: many(providerStatusLogs, {
+    relationName: "statusLogResolver",
+  }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -74,6 +87,7 @@ export const providerRelations = relations(providers, ({ one, many }) => ({
     references: [providerStats.providerId],
   }),
   financials: many(bookingsFinancial),
+  logs: many(providerStatusLogs),
 }));
 
 export const providerMemberRelations = relations(
@@ -338,6 +352,69 @@ export const bookingsFinancialRelations = relations(
     plan: one(plans, {
       fields: [bookingsFinancial.planId],
       references: [plans.id],
+    }),
+  }),
+);
+
+// ============================================
+// PROVIDER LOGS RELATIONS
+// ============================================
+export const providerStatusLogsRelations = relations(
+  providerStatusLogs,
+  ({ one }) => ({
+    provider: one(providers, {
+      fields: [providerStatusLogs.providerId],
+      references: [providers.id],
+    }),
+
+    actor: one(user, {
+      fields: [providerStatusLogs.actorId],
+      references: [user.id],
+      relationName: "statusLogActor",
+    }),
+
+    resolver: one(user, {
+      fields: [providerStatusLogs.resolvedBy],
+      references: [user.id],
+      relationName: "statusLogResolver",
+    }),
+  }),
+);
+
+// ============================================
+// SUPPORT RELATIONS
+// ============================================
+export const supportTicketsRelations = relations(
+  supportTickets,
+  ({ one, many }) => ({
+    user: one(user, {
+      fields: [supportTickets.userId],
+      references: [user.id],
+      relationName: "ticket_user",
+    }),
+    assignee: one(user, {
+      fields: [supportTickets.assigneeId],
+      references: [user.id],
+      relationName: "ticket_assignee",
+    }),
+    provider: one(providers, {
+      fields: [supportTickets.providerId],
+      references: [providers.id],
+    }),
+    messages: many(supportMessages),
+  }),
+);
+
+export const supportMessagesRelations = relations(
+  supportMessages,
+  ({ one }) => ({
+    ticket: one(supportTickets, {
+      fields: [supportMessages.ticketId],
+      references: [supportTickets.id],
+    }),
+    author: one(user, {
+      fields: [supportMessages.authorId],
+      references: [user.id],
     }),
   }),
 );
