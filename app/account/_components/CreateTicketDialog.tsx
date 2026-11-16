@@ -61,7 +61,7 @@ import {
   supportTicketSchema,
   type SupportTicketFormValues,
 } from "@/validations/support";
-import { SUPPORT_CATEGORIES, SUPPORT_PRIORITIES } from "@/lib/support-filters";
+import { SUPPORT_CATEGORIES, SUPPORT_PRIORITIES } from "@/app/account/support/support-filters";
 
 interface CreateTicketDialogProps {
   open: boolean;

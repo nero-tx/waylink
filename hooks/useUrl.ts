@@ -9,8 +9,8 @@ import {
   useTransition,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { isEqual, UrlValue } from "@/lib/utils";
 
-export type UrlValue = string | number | boolean | string[] | null | undefined;
 export type UrlPatch<T> = { [K in keyof T]?: T[K] | null };
 type ElementOf<V> = V extends readonly (infer E)[] ? E : NonNullable<V>;
 
@@ -28,12 +28,6 @@ export interface SetUrlParams<T> {
 }
 
 // Read / write helpers
-function isEqual(a: UrlValue, b: UrlValue) {
-  if (Array.isArray(a) && Array.isArray(b))
-    return a.join("\u0000") === b.join("\u0000");
-  return a === b;
-}
-
 function readParam(
   sp: URLSearchParams,
   key: string,

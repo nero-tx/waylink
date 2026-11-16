@@ -470,3 +470,87 @@ export const formatTicketDate = (date: Date | string) => {
 
   return compareDateRange(date, now, "1m") ? timeAgo(date) : fmtDate(date);
 };
+
+export type UrlValue = string | number | boolean | string[] | null | undefined;
+export function isEqual<T>(a: T, b: T): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return (
+      a.length === b.length &&
+      a.every((value, index) => Object.is(value, b[index]))
+    );
+  }
+
+  return Object.is(a, b);
+}
+
+type QueryValue = string | number | boolean | string[] | null | undefined;
+
+interface BuildUrlOptions<T> {
+  defaults?: Partial<T>;
+  ignore?: { [K in keyof T]?: T[K] | readonly T[K][] };
+  useDomain?: boolean;
+}
+
+const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+/**
+ * Merges an API path with a params object (e.g. `urlParams` from `useUrl`)
+ * and returns the final URL string.
+ *
+ * Skipped: null, undefined, "", values equal to `defaults`, values in `ignore`.
+ * Arrays become repeated params (?tag=a&tag=b).
+ * A query already on `path` is kept 'params override matching keys'.
+ *
+ * @example
+ * buildUrl("/api/example", urlParams, {
+ *   defaults: {category: "machine" ,search:"laptop"},
+ *   ignore: { category: "all" },
+ * });
+ */
+export function buildUrl<T extends Record<keyof T, UrlValue>>(
+  path: string,
+  params: T,
+  { defaults, ignore, useDomain = true }: BuildUrlOptions<T> = {},
+): string {
+  const queryStart = path.indexOf("?");
+  const base = queryStart === -1 ? path : path.slice(0, queryStart);
+  const search = new URLSearchParams(
+    queryStart === -1 ? "" : path.slice(queryStart + 1),
+  );
+
+  for (const key of Object.keys(params) as (keyof T & string)[]) {
+    const value = params[key];
+
+    const isEmpty = value === null || value === undefined || value === "";
+    const isDefEqual = isEqual<unknown>(value, defaults?.[key]);
+    const isIg = isIgnored(value, ignore?.[key]);
+
+    if (isEmpty || isDefEqual || isIg) {
+      search.delete(key);
+      continue;
+    }
+
+    search.delete(key);
+
+    if (Array.isArray(value)) {
+      for (const item of value) search.append(key, String(item));
+    } else {
+      search.set(key, String(value));
+    }
+  }
+
+  const query = search.toString();
+  const fullPath = query ? `${base}?${query}` : base;
+
+  return useDomain ? new URL(fullPath, baseURL).toString() : fullPath;
+}
+
+function isIgnored(value: UrlValue, rule: unknown): boolean {
+  if (rule === undefined) return false;
+  if (!Array.isArray(rule)) return isEqual<unknown>(value, rule);
+
+  return (
+    isEqual<unknown>(value, rule) ||
+    rule.some((candidate) => isEqual<unknown>(value, candidate))
+  );
+}

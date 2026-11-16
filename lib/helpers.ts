@@ -167,3 +167,36 @@ export function formatBanExpiry(duration: string, sec: number) {
   const expiresAt = new Date(Date.now() + n * sec * 1000);
   return fmtDateTime(expiresAt);
 }
+
+export class FetchError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "FetchError";
+    this.status = status;
+  }
+}
+
+export async function fetcher<T>(
+  url: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
+
+  const res = await fetch(url, { ...init, headers });
+
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const body = await res.json();
+      if (typeof body?.message === "string") message = body.message;
+    } catch {
+      /* body wasn't JSON, keep the generic message */
+    }
+    throw new FetchError(message, res.status);
+  }
+
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
