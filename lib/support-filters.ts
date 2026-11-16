@@ -41,7 +41,7 @@ export const SUPPORT_PRIORITIES: readonly SupportPriority[] = [
   "urgent",
 ];
 
-const STATUS_FILTERS: readonly StatusFilter[] = [
+export const STATUS_FILTERS: readonly StatusFilter[] = [
   "open",
   "pending",
   "closed",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   CheckCircle2,
   CircleDot,
@@ -13,14 +13,16 @@ import type { SupportCategory, SupportTicket } from "@/lib/all-types";
 import {
   filterTickets,
   getStatusCounts,
-  parseFilters,
+  STATUS_FILTERS,
+  SUPPORT_CATEGORIES,
+  SUPPORT_PRIORITIES,
   SupportFiltersState,
   type StatusFilter,
 } from "@/lib/support-filters";
 import { SupportFilters, SupportTicketRow } from "./SupportElements";
 import { cn } from "@/lib/utils";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CreateTicketDialog } from "./CreateTicketDialog";
+import { useUrl, UseUrlOptions } from "@/hooks/useUrl";
 
 export type SupportRole = "user" | "provider";
 
@@ -52,11 +54,6 @@ const STATUS_TABS: { value: StatusFilter; label: string; icon?: LucideIcon }[] =
     { value: "all", label: "All" },
   ];
 
-interface SupportTicketsViewProps {
-  role: SupportRole;
-  tickets: SupportTicket[];
-}
-
 const DEFAULT_FILTERS: SupportFiltersState = {
   status: "open",
   category: "all",
@@ -64,51 +61,44 @@ const DEFAULT_FILTERS: SupportFiltersState = {
   q: "",
 };
 
-export function SupportTicketsView({ role, tickets }: SupportTicketsViewProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+const OPTIONS: UseUrlOptions<SupportFiltersState> = {
+  allowed: {
+    status: STATUS_FILTERS,
+    category: ["all", ...SUPPORT_CATEGORIES],
+    priority: ["all", ...SUPPORT_PRIORITIES],
+  },
+};
+
+export function SupportTicketsView({
+  role,
+  tickets,
+}: {
+  role: SupportRole;
+  tickets: SupportTicket[];
+}) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const config = ROLE_CONFIG[role];
-
-  const filters = useMemo(() => parseFilters(searchParams), [searchParams]);
-  const resetFilters = useCallback(() => {
-    router.replace(pathname, { scroll: false });
-  }, [router, pathname]);
-
-  const setFilters = useCallback(
-    (patch: Partial<SupportFiltersState>) => {
-      const params = new URLSearchParams(searchParams.toString());
-
-      for (const [key, value] of Object.entries(patch) as [
-        keyof SupportFiltersState,
-        string,
-      ][]) {
-        if (value === DEFAULT_FILTERS[key]) params.delete(key);
-        else params.set(key, value);
-      }
-
-      const query = params.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, {
-        scroll: false,
-      });
-    },
-    [router, pathname, searchParams],
+  const { resetUrl, urlParams, setUrlParams ,hasActiveParams ,isPending } = useUrl<SupportFiltersState>(
+    DEFAULT_FILTERS,
+    OPTIONS,
   );
+  const config = ROLE_CONFIG[role];
+  useEffect(() => {
+    console.log(urlParams)
+  } ,[urlParams])
 
   // Client-side for now. When the API reads the URL params, pass `filters`
   // to the fetch and drop this line.
   const visibleTickets = useMemo(
-    () => filterTickets(tickets, filters),
-    [tickets, filters],
+    () => filterTickets(tickets, urlParams),
+    [tickets, urlParams],
   );
   const counts = useMemo(() => getStatusCounts(tickets), [tickets]);
 
   return (
     <div className="space-y-4">
       <SupportFilters
-        filters={filters}
-        onChange={setFilters}
+        filters={urlParams}
+        onChange={setUrlParams}
         categories={config.categories}
         actions={
           <Button
@@ -125,18 +115,20 @@ export function SupportTicketsView({ role, tickets }: SupportTicketsViewProps) {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/40 px-4 py-3">
           <div className="flex flex-wrap items-center gap-4">
             {STATUS_TABS.map(({ value, label, icon: Icon }) => {
-              const isActive = filters.status === value;
+              const isActive = urlParams.status === value;
 
               return (
                 <span
                   key={value}
                   role="button"
                   tabIndex={0}
-                  onClick={() => setFilters({ status: value as StatusFilter })}
+                  onClick={() =>
+                    setUrlParams({ status: value as StatusFilter })
+                  }
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      setFilters({ status: value as StatusFilter });
+                      setUrlParams({ status: value as StatusFilter });
                     }
                   }}
                   className={cn(
@@ -179,7 +171,7 @@ export function SupportTicketsView({ role, tickets }: SupportTicketsViewProps) {
                 <p className="mb-4 text-sm text-muted-foreground">
                   Try adjusting your status, category or priority filters.
                 </p>
-                <Button size="sm" variant="outline" onClick={resetFilters}>
+                <Button size="sm" variant="outline" onClick={() => resetUrl()}>
                   Reset filters
                 </Button>
               </>
