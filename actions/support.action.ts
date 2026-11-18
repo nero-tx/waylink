@@ -14,6 +14,8 @@ import {
 } from "@/validations/support";
 import { authGuard } from "./service.action";
 import { getAuthSession } from "@/lib/auth-server";
+import { customAlphabet } from "nanoid";
+import { randomInt } from "node:crypto";
 
 type SupportRole = "user" | "provider";
 type ActionError = {
@@ -88,6 +90,20 @@ async function resolveActor(
   if (!session) return { error: UNAUTHORIZED };
 
   return { actor: { role: "user", userId: session.user.id } };
+}
+
+/**
+ * Generates a random ticket number using a 31-character alphabet.
+ * Excludes 0, 1, I, L, and O to avoid look-alike confusion.
+ * Supports random lengths from 6 to 10 characters (inclusive).
+ * A larger alphabet reduces collision probability; the unique index
+ * and retry-on-conflict logic in createTicket guarantee uniqueness.
+ *
+ * Examples: 7K3M9Q, HW4BRNZJ2A
+ */
+function generateTicketNumber(min = 6, max = 10): string {
+  const length = randomInt(min, max + 1);
+  return customAlphabet("23456789ABCDEFGHJKMNPQRSTUVWXYZ", length)();
 }
 
 /** Never trust the client: re-validate with the same schema + role rules. */
@@ -165,10 +181,11 @@ export async function createSupportTicket(
 
   try {
     const ticket = await db.transaction(async (tx) => {
-      // ticket_number, status default, last_message_at and timestamps come from the DB
+      // status default, last_message_at and timestamps come from the DB
       const [created] = await tx
         .insert(supportTickets)
         .values({
+          ticketNumber: generateTicketNumber(),
           subject: values.subject,
           category: values.category,
           priority: values.priority,

@@ -6,7 +6,6 @@ import {
   timestamp,
   boolean,
   uniqueIndex,
-  integer,
 } from "drizzle-orm/pg-core";
 import { user } from "./public";
 import { products } from "./product";
@@ -17,8 +16,10 @@ import {
   supportPriorityEnum,
   supportStatusEnum,
   timestamps,
+  tsvector,
 } from "./enums";
 import { providers } from "./provider";
+import { sql } from "drizzle-orm";
 
 export const wishlists = pgTable(
   "wishlists",
@@ -84,9 +85,7 @@ export const supportTickets = pgTable(
   "support_tickets",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    // Human-friendly number shown to users, e.g. #1042
-    ticketNumber: integer("ticket_number").generatedAlwaysAsIdentity(),
-
+    ticketNumber: text("ticket_number").notNull(),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -106,6 +105,13 @@ export const supportTickets = pgTable(
 
     lastMessageAt: timestamp("last_message_at").notNull().defaultNow(),
     closedAt: timestamp("closed_at"),
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      () => sql`to_tsvector(
+        'english',
+        coalesce(subject, '') || ' ' ||
+        coalesce(ticket_number, '')
+      )`,
+    ),
     ...timestamps,
   },
   (t) => [
@@ -115,6 +121,7 @@ export const supportTickets = pgTable(
     index("support_ticket_assignee_idx").on(t.assigneeId),
     index("support_ticket_status_idx").on(t.status, t.priority),
     index("support_ticket_category_idx").on(t.category),
+    index("support_ts_vectore_idx").using("gin", t.searchVector),
   ],
 );
 

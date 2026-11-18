@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:gen": "npx drizzle-kit generate",
+    "db:mig": "npx drizzle-kit migrate",
+    "db:push": "npx drizzle-kit push"
   },
   "dependencies": {
     "@arcjet/inspect": "^1.0.0",

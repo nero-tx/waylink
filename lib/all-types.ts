@@ -605,7 +605,7 @@ export type SupportPriority = "low" | "normal" | "high" | "urgent";
 
 export interface SupportTicket {
   id: string;
-  ticketNumber: number;
+  ticketNumber: string;
   userId: string;
   status: SupportStatus;
   providerId: string | null;
