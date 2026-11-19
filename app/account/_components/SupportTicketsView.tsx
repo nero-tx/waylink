@@ -1,38 +1,42 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFetch } from "@/hooks/useFetch";
 import { useUrl, type UseUrlOptions } from "@/hooks/useUrl";
-import type { SupportCategory, SupportTicket } from "@/lib/all-types";
+import type { Pagination, SupportCategory } from "@/lib/all-types";
 import {
   buildSupportTicketsUrl,
-  SupportTicketsResponse,
-} from "@/app/account/support/support-filters";
-import {
   DEFAULT_FILTERS,
   STATUS_FILTERS,
   SUPPORT_CATEGORIES,
   SUPPORT_PRIORITIES,
   type SupportFiltersState,
+  type SupportTicketsResponse,
 } from "@/app/account/support/support-filters";
 import { cn } from "@/lib/utils";
-import { CreateTicketDialog } from "./CreateTicketDialog";
 import {
   StatusTabs,
   SupportFilters,
   SupportTicketRow,
-} from "./SupportElements";
-import {
   SupportTicketsEmpty,
   SupportTicketsError,
   SupportTicketsSkeleton,
+  TicketsPagination,
+  TicketsPaginationSkeleton,
 } from "./SupportElements";
-import { SupportTicketFormValues } from "@/validations/support";
+import type { SupportTicketFormValues } from "@/validations/support";
 import { createSupportTicket } from "@/actions/support.action";
 
+const CreateTicketDialog = dynamic(
+  () => import("./CreateTicketDialog").then((m) => m.CreateTicketDialog),
+  { ssr: false },
+);
+
 export type SupportRole = "user" | "provider";
+const LIMIT = 30;
 
 const ROLE_CONFIG: Record<
   SupportRole,
@@ -62,63 +66,116 @@ const URL_OPTIONS: UseUrlOptions<SupportFiltersState> = {
   },
 };
 
+const EMPTY_TICKETS: SupportTicketsResponse["data"]["tickets"] = [];
+const EMPTY_PAGINATION: Pagination = {
+  limit: LIMIT,
+  offset: 0,
+  hasNextPage: false,
+  hasPrevPage: false,
+  page: 1,
+  total: 0,
+  totalPages: 0,
+};
+
 export function SupportTicketsView({ role }: { role: SupportRole }) {
   const config = ROLE_CONFIG[role];
+  const cardRef = useRef<HTMLDivElement>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMounted, setDialogMounted] = useState(false);
 
   const { urlParams, setUrlParams, resetUrl, hasActiveParams, isPending } =
     useUrl<SupportFiltersState>(DEFAULT_FILTERS, URL_OPTIONS);
 
+  const filterKey = useMemo(() => JSON.stringify(urlParams), [urlParams]);
+  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
+  if (pageState.key !== filterKey) {
+    setPageState({ key: filterKey, page: 1 });
+  }
+  const page = pageState.key === filterKey ? pageState.page : 1;
+
   const apiUrl = useMemo(
-    () => buildSupportTicketsUrl(urlParams, role),
-    [urlParams],
+    () =>
+      buildSupportTicketsUrl(
+        urlParams,
+        { offset: (page - 1) * LIMIT, limit: LIMIT },
+        role,
+      ),
+    [urlParams, page, role],
   );
 
-  const { data, error, isLoading, isFetching, refetch, mutate } =
+  const { data, error, isLoading, isFetching, refetch } =
     useFetch<SupportTicketsResponse>(apiUrl);
 
-  const tickets = data?.data.tickets ?? [];
+  const tickets = data?.data.tickets ?? EMPTY_TICKETS;
+  const pagination = data?.data.pagination ?? EMPTY_PAGINATION;
+  const counts = data?.data.counts;
+
   const isRefreshing = !isLoading && (isFetching || isPending);
+  const isBusy = isLoading || isRefreshing;
 
-  const handleCreate = async (values: SupportTicketFormValues) => {
-    const result = await createSupportTicket(role, values);
-    if (result.state === "error") throw new Error(result.message);
+  const goToPage = useCallback(
+    (p: number) => {
+      setPageState({ key: filterKey, page: p });
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+    [filterKey],
+  );
 
-    const ticket = result.data;
-    if (ticket) {
-      mutate((prev) => {
-        if (!prev?.data) return prev;
+  useEffect(() => {
+    if (isFetching || !data) return;
+    const lastPage = Math.max(1, pagination.totalPages);
+    if (page > lastPage) setPageState({ key: filterKey, page: lastPage });
+  }, [data, isFetching, page, pagination.totalPages, filterKey]);
 
-        return {
-          ...prev,
-          data: {
-            ...prev.data,
-            tickets: [ticket, ...prev.data.tickets],
-          },
-        };
-      });
-    } else {
-      refetch();
-    }
-  };
+  const openDialog = useCallback(() => {
+    setDialogMounted(true);
+    setDialogOpen(true);
+  }, []);
+
+  const handleStatusChange = useCallback(
+    (status: SupportFiltersState["status"]) => setUrlParams({ status }),
+    [setUrlParams],
+  );
+
+  const handleReset = useCallback(() => resetUrl(), [resetUrl]);
+
+  const handleCreate = useCallback(
+    async (values: SupportTicketFormValues) => {
+      const result = await createSupportTicket(role, values);
+      if (result.state === "error") throw new Error(result.message);
+
+      // The new ticket may not match the active filters, and total/counts
+      // change, so refetch from page 1 instead of patching the cache
+      if (page !== 1) setPageState({ key: filterKey, page: 1 });
+      else refetch();
+    },
+    [role, page, filterKey, refetch],
+  );
+
+  const showLoader = useDelayedBusy(isRefreshing);
+  const listKey = `${pagination.page}:${tickets[0]?.id ?? "empty"}`;
 
   const body = error ? (
     <SupportTicketsError error={error} onRetry={refetch} />
   ) : isLoading ? (
-    <SupportTicketsSkeleton />
+    <>
+      <SupportTicketsSkeleton />
+      <TicketsPaginationSkeleton />
+    </>
   ) : tickets.length === 0 ? (
     <SupportTicketsEmpty
       filtered={hasActiveParams}
-      onReset={() => resetUrl()}
-      openDialog={() => setDialogOpen(true)}
+      onReset={handleReset}
+      openDialog={openDialog}
     />
   ) : (
     <ul
       aria-busy={isRefreshing}
       className={cn(
         "divide-y transition-opacity duration-150",
-        isRefreshing && "opacity-60",
+        isRefreshing && "pointer-events-none opacity-60",
       )}
+      key={listKey}
     >
       {tickets.map((ticket) => (
         <SupportTicketRow key={ticket.id} ticket={ticket} />
@@ -134,7 +191,7 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
         categories={config.categories}
         actions={
           <Button
-            onClick={() => setDialogOpen(true)}
+            onClick={openDialog}
             className="group cursor-pointer gap-2 bg-green-700 text-white transition-all duration-200 hover:bg-green-800 hover:shadow-md hover:shadow-green-700/20 dark:bg-green-600 dark:hover:bg-green-500"
           >
             <Plus className="size-4 transition-transform duration-200 group-hover:rotate-90" />
@@ -143,24 +200,81 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
         }
       />
 
-      <div className="overflow-hidden rounded-md border text-card-foreground">
+      <div
+        ref={cardRef}
+        className="scroll-mt-4 overflow-hidden rounded-md border text-card-foreground relative"
+      >
+        <TopLoader active={showLoader} />
+        <p role="status" className="sr-only">
+          {isRefreshing ? "Loading tickets" : ""}
+        </p>
+
         <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/40 px-4 py-3">
           <StatusTabs
             value={urlParams.status}
-            onChange={(status) => setUrlParams({ status })}
-            counts={data?.data.counts}
+            onChange={handleStatusChange}
+            counts={counts}
             isLoading={isLoading}
           />
         </div>
 
         {body}
+
+        {pagination.total > 0 && (
+          <div className="border-t bg-muted/20 px-4 py-3">
+            <TicketsPagination
+              pagination={pagination}
+              onPageChange={goToPage}
+              disabled={isBusy}
+            />
+          </div>
+        )}
       </div>
 
-      <CreateTicketDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSubmit={(payload) => handleCreate(payload)}
-      />
+      {dialogMounted && (
+        <CreateTicketDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          onSubmit={handleCreate}
+        />
+      )}
+    </div>
+  );
+}
+
+function useDelayedBusy(busy: boolean, delay = 150, minShow = 400) {
+  const [show, setShow] = useState(false);
+  const shownAt = useRef(0);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    if (busy && !show) {
+      timer = setTimeout(() => {
+        shownAt.current = Date.now();
+        setShow(true);
+      }, delay);
+    } else if (!busy && show) {
+      const remaining = Math.max(0, minShow - (Date.now() - shownAt.current));
+      timer = setTimeout(() => setShow(false), remaining);
+    }
+
+    return () => clearTimeout(timer);
+  }, [busy, show, delay, minShow]);
+
+  return show;
+}
+
+function TopLoader({ active }: { active: boolean }) {
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        "pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden bg-green-700/10 transition-opacity duration-200",
+        active ? "opacity-100" : "opacity-0",
+      )}
+    >
+      <div className="loader-bar h-full w-1/4 rounded-full bg-green-600 animate-[loader-slide_1.1s_ease-in-out_infinite]" />
     </div>
   );
 }

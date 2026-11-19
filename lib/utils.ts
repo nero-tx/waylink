@@ -533,7 +533,7 @@ export function buildUrl<T extends Record<keyof T, UrlValue>>(
     search.delete(key);
 
     if (Array.isArray(value)) {
-      for (const item of value) search.append(key, String(item));
+      search.append(`${key}[in]`, String(value.join(",")));
     } else {
       search.set(key, String(value));
     }

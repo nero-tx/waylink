@@ -61,7 +61,10 @@ import {
   supportTicketSchema,
   type SupportTicketFormValues,
 } from "@/validations/support";
-import { SUPPORT_CATEGORIES, SUPPORT_PRIORITIES } from "@/app/account/support/support-filters";
+import {
+  SUPPORT_CATEGORIES,
+  SUPPORT_PRIORITIES,
+} from "@/app/account/support/support-filters";
 
 interface CreateTicketDialogProps {
   open: boolean;
@@ -215,12 +218,14 @@ export function CreateTicketDialog({
       await onSubmit(values);
       toast.success(isEdit ? "Ticket updated." : "Created Successfully.");
       onOpenChange(false);
-    } catch {
-      toast.error(
-        isEdit
-          ? "Something went wrong while saving the ticket. Try again."
-          : "Something went wrong while creating the ticket. Try again.",
-      );
+    } catch (e) {
+      const errMessage =
+        e instanceof Error
+          ? e.message
+          : isEdit
+            ? "Something went wrong while saving the ticket. Try again."
+            : "Something went wrong while creating the ticket. Try again.";
+      toast.error(errMessage);
     }
   };
 

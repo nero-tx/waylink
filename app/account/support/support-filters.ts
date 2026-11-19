@@ -81,6 +81,7 @@ export interface SupportTicketsResponse {
 
 export function buildSupportTicketsUrl(
   filters: SupportFiltersState,
+  pagination: Pick<Pagination, "limit" | "offset">,
   role: "user" | "provider" = "user",
 ) {
   return buildUrl(
@@ -93,6 +94,8 @@ export function buildSupportTicketsUrl(
       category: filters.category,
       priority: filters.priority,
       search: filters.q.trim(),
+      limit: pagination.limit,
+      offset: pagination.offset,
     },
     { ignore: { category: "all", priority: "all" } },
   );

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, ReactNode } from "react";
 import {
+  Pagination,
   SupportCategory,
   SupportPriority,
   SupportStatus,
@@ -22,6 +23,8 @@ import {
   AlertCircle,
   RefreshCw,
   Plus,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -577,6 +580,108 @@ export function StatusTabs({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function getPageItems(page: number, totalPages: number): (number | "…")[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const items: (number | "…")[] = [1];
+  const start = Math.max(2, page - 1);
+  const end = Math.min(totalPages - 1, page + 1);
+  if (start > 2) items.push("…");
+  for (let p = start; p <= end; p++) items.push(p);
+  if (end < totalPages - 1) items.push("…");
+  items.push(totalPages);
+  return items;
+}
+
+export function TicketsPagination({
+  pagination,
+  onPageChange,
+  disabled,
+}: {
+  pagination: Pagination;
+  onPageChange: (page: number) => void;
+  disabled?: boolean;
+}) {
+  const { page, totalPages, total, limit, offset, hasNextPage, hasPrevPage } =
+    pagination;
+
+  if (total === 0) return null;
+
+  const from = offset + 1;
+  const to = Math.min(offset + limit, total);
+
+  return (
+    <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+      <p className="text-sm text-muted-foreground">
+        Showing {from}–{to} of {total}
+      </p>
+
+      {totalPages > 1 && (
+        <nav className="flex items-center gap-1" aria-label="Pagination">
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={disabled || !hasPrevPage}
+            onClick={() => onPageChange(page - 1)}
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          {getPageItems(page, totalPages).map((item, i) =>
+            item === "…" ? (
+              <span key={`gap-${i}`} className="px-2 text-muted-foreground">
+                …
+              </span>
+            ) : (
+              <Button
+                key={item}
+                variant={item === page ? "default" : "outline"}
+                size="icon"
+                disabled={disabled}
+                aria-current={item === page ? "page" : undefined}
+                onClick={() => onPageChange(item)}
+              >
+                {item}
+              </Button>
+            ),
+          )}
+
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={disabled || !hasNextPage}
+            onClick={() => onPageChange(page + 1)}
+            aria-label="Next page"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+export function TicketsPaginationSkeleton() {
+  return (
+    <div
+      className="flex flex-col items-center justify-between gap-3 sm:flex-row px-4 py-3.5"
+      aria-hidden="true"
+    >
+      <Skeleton className="h-5 w-32" />
+
+      <div className="flex items-center gap-1">
+        <Skeleton className="size-9 rounded-md" />
+        <Skeleton className="size-9 rounded-md" />
+        <Skeleton className="size-9 rounded-md" />
+        <Skeleton className="size-9 rounded-md" />
+        <Skeleton className="size-9 rounded-md" />
+      </div>
     </div>
   );
 }

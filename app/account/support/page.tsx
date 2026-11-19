@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 const Page = () => {
   return (
-    <div className="min-h-screen w-full overflow-x-hidden">
+    <div className="h-full w-full overflow-x-hidden">
       <div className="px-4 py-8 md:px-6">
         <SupportTicketsView role="user" />
       </div>
