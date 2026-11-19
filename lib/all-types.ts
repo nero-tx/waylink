@@ -631,3 +631,7 @@ export interface SupportMessage {
   isInternal: boolean;
   body: string;
 }
+
+export type Actor =
+  | { role: "user" | "admin"; userId: string }
+  | { role: "provider"; userId: string; providerId: string };

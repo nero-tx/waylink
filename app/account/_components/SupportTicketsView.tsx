@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFetch } from "@/hooks/useFetch";
 import { useUrl, type UseUrlOptions } from "@/hooks/useUrl";
-import type { SupportCategory } from "@/lib/all-types";
+import type { SupportCategory, SupportTicket } from "@/lib/all-types";
 import {
   buildSupportTicketsUrl,
   SupportTicketsResponse,
@@ -69,12 +69,15 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
   const { urlParams, setUrlParams, resetUrl, hasActiveParams, isPending } =
     useUrl<SupportFiltersState>(DEFAULT_FILTERS, URL_OPTIONS);
 
-  const apiUrl = useMemo(() => buildSupportTicketsUrl(urlParams), [urlParams]);
+  const apiUrl = useMemo(
+    () => buildSupportTicketsUrl(urlParams, role),
+    [urlParams],
+  );
 
   const { data, error, isLoading, isFetching, refetch, mutate } =
     useFetch<SupportTicketsResponse>(apiUrl);
 
-  const tickets = data?.tickets ?? [];
+  const tickets = data?.data.tickets ?? [];
   const isRefreshing = !isLoading && (isFetching || isPending);
 
   const handleCreate = async (values: SupportTicketFormValues) => {
@@ -83,10 +86,17 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
 
     const ticket = result.data;
     if (ticket) {
-      mutate((prev) => ({
-        ...prev,
-        tickets: [ticket, ...(prev?.tickets ?? [])],
-      }));
+      mutate((prev) => {
+        if (!prev?.data) return prev;
+
+        return {
+          ...prev,
+          data: {
+            ...prev.data,
+            tickets: [ticket, ...prev.data.tickets],
+          },
+        };
+      });
     } else {
       refetch();
     }
@@ -138,7 +148,7 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
           <StatusTabs
             value={urlParams.status}
             onChange={(status) => setUrlParams({ status })}
-            counts={data?.counts}
+            counts={data?.data.counts}
             isLoading={isLoading}
           />
         </div>

@@ -1,4 +1,5 @@
 import type {
+  Pagination,
   SupportCategory,
   SupportPriority,
   SupportStatus,
@@ -71,21 +72,27 @@ export function getStatusCounts(tickets: readonly SupportTicket[]) {
 }
 
 export interface SupportTicketsResponse {
-  tickets: SupportTicket[];
-  counts?: Record<StatusFilter, number>;
+  data: {
+    tickets: SupportTicket[];
+    counts?: Record<StatusFilter, number>;
+    pagination: Pagination;
+  };
 }
 
 export function buildSupportTicketsUrl(
   filters: SupportFiltersState,
+  role: "user" | "provider" = "user",
 ) {
   return buildUrl(
-    "/api/support",
+    `/api/support?role=${role}`,
     {
       status:
-        filters.status === "all" ? [] : [...STATUS_GROUPS[filters.status]],
+        filters.status === "all"
+          ? undefined
+          : [...STATUS_GROUPS[filters.status]],
       category: filters.category,
       priority: filters.priority,
-      q: filters.q.trim(),
+      search: filters.q.trim(),
     },
     { ignore: { category: "all", priority: "all" } },
   );
