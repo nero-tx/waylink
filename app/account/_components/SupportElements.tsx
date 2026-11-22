@@ -306,7 +306,7 @@ export function SupportTicketRow({ ticket }: { ticket: SupportTicket }) {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <Link
-                  href={`/support/${ticket.id}?$tknumber=${ticket.ticketNumber}`}
+                  href={`/account/support/${ticket.id}?tknumber=${ticket.ticketNumber}`}
                   className="text-sm font-semibold leading-snug transition-colors duration-200 group-hover:text-green-700 dark:group-hover:text-green-400 group-hover:underline decoration-green-600/50 dark:decoration-green-400/50 underline-offset-4 sm:text-base"
                 >
                   {ticket.subject}
@@ -338,7 +338,7 @@ export function SupportTicketRow({ ticket }: { ticket: SupportTicket }) {
           </div>
 
           {ticket.messageCount !== undefined && (
-            <div className="hidden shrink-0 items-center gap-1.5 pt-0.5 text-xs text-muted-foreground sm:flex">
+            <div className="shrink-0 items-center gap-1.5 pt-0.5 text-xs text-muted-foreground flex">
               <MessageSquare className="size-3.5" />
               <span>{ticket.messageCount}</span>
             </div>

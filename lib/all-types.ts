@@ -621,6 +621,12 @@ export interface SupportTicket {
   hasStaffReply?: boolean;
 }
 
+type SupportMessageAuthor = {
+  id: string;
+  name: string;
+  image?: string;
+};
+
 export interface SupportMessage {
   id: string;
   createdAt: Date;
@@ -630,7 +636,26 @@ export interface SupportMessage {
   isStaff: boolean;
   isInternal: boolean;
   body: string;
+  author: SupportMessageAuthor;
 }
+
+export type SupportTicketConversation = {
+  ticket: SupportTicket & {
+    provider: {
+      id: string;
+      name: string;
+    } | null;
+    assignee: SupportMessageAuthor | null;
+  };
+  messages: SupportMessage[];
+};
+
+export type SupportViewer = {
+  id: string;
+  name: string;
+  image: string | null;
+  isStaff: boolean;
+};
 
 export type Actor =
   | { role: "user" | "admin"; userId: string }

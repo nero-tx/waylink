@@ -100,3 +100,43 @@ export function buildSupportTicketsUrl(
     { ignore: { category: "all", priority: "all" } },
   );
 }
+
+export const STATUS_LABEL: Record<SupportStatus, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  waiting_on_customer: "Waiting on customer",
+  resolved: "Resolved",
+  closed: "Closed",
+};
+
+export const PRIORITY_LABEL: Record<SupportPriority, string> = {
+  low: "Low",
+  normal: "Normal",
+  high: "High",
+  urgent: "Urgent",
+};
+
+export const CATEGORY_LABEL: Record<SupportCategory, string> = {
+  account: "Account",
+  provider_status: "Provider status",
+  booking: "Booking",
+  billing: "Billing",
+  listing: "Listing",
+  technical: "Technical",
+  other: "Other",
+};
+
+export const STATUS_DOT: Record<SupportStatus, string> = {
+  open: "bg-emerald-500",
+  in_progress: "bg-sky-500",
+  waiting_on_customer: "bg-amber-500",
+  resolved: "bg-teal-700",
+  closed: "bg-zinc-400",
+};
+
+export const PRIORITY_STYLE: Record<SupportPriority, string> = {
+  low: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
+  normal: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
+  high: "bg-orange-500/10 text-orange-700 dark:text-orange-400",
+  urgent: "bg-red-500/10 text-red-700 dark:text-red-400",
+};
