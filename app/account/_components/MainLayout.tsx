@@ -91,7 +91,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href;
+          const active =
+            item.href === "/account"
+              ? pathname === "/account"
+              : pathname.startsWith(item.href);
           const Icon = item.icon;
 
           return (
@@ -158,20 +161,25 @@ export default function UserLayout({
   const pathname = usePathname();
   const { logout } = useAuth();
   const [logoutOpen, setLogoutOpen] = useState(false);
-    const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
-    const handleLogout = () => {
-      startTransition(async () => {
-        await logout();
-      });
-    };
+  const handleLogout = () => {
+    startTransition(async () => {
+      await logout();
+    });
+  };
 
-  const currentPage = NAV_ITEMS.find((n) => n.href === pathname);
-  const currentAccent = currentPage?.accent ?? "#3b82f6";
-  const currentLabel = currentPage?.label ?? "Profile";
+  const isDynamicSupport = /^\/account\/support\/[^/]+$/.test(pathname);
+  const currentPage = NAV_ITEMS.find((n) =>
+    n.href === "/account"
+      ? pathname === "/account"
+      : pathname.startsWith(n.href),
+  );
+  const currentAccent = currentPage?.accent ?? "#8B5CF6";
+  const currentLabel = currentPage?.label ?? "Support Center";
 
   return (
-    <div className="min-h-screen font-sans flex">
+    <div className="h-screen font-sans flex overflow-hidden bg-background">
       <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -196,7 +204,7 @@ export default function UserLayout({
         </AlertDialogContent>
       </AlertDialog>
 
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border/70 bg-card/60 backdrop-blur-xl sticky top-0 h-screen">
+      <aside className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border/70 bg-card/60 backdrop-blur-xl h-full">
         <SidebarContent />
       </aside>
       <AnimatePresence>
@@ -233,9 +241,9 @@ export default function UserLayout({
         )}
       </AnimatePresence>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-30 border-b border-border/80 backdrop-blur-lg">
-          <div className="p-4 px-4 md:px-6 flex items-center justify-between gap-3">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        <header className="shrink-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur-lg">
+          <div className="p-3.5 px-4 md:px-6 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -244,15 +252,35 @@ export default function UserLayout({
               >
                 <Menu className="w-4.5 h-4.5" />
               </button>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-2 h-2 rounded-full"
-                  style={{ background: currentAccent }}
-                />
-                <span className="text-sm font-semibold text-foreground tracking-tight">
-                  {currentLabel}
-                </span>
-              </div>
+
+              {isDynamicSupport ? (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/account/support"
+                    className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ background: currentAccent }}
+                    />
+                    <span>Support Center</span>
+                  </Link>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
+                  <span className="text-xs sm:text-sm font-semibold text-foreground tracking-tight truncate max-w-48 sm:max-w-xs">
+                    Ticket Discussion
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ background: currentAccent }}
+                  />
+                  <span className="text-sm font-semibold text-foreground tracking-tight">
+                    {currentLabel}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -267,7 +295,14 @@ export default function UserLayout({
             </div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main
+          className={cn(
+            "flex-1 min-h-0 flex flex-col",
+            isDynamicSupport ? "overflow-hidden" : "overflow-y-auto",
+          )}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

@@ -54,6 +54,19 @@
   --color-green-1: var(--green-1);
   --color-gray-light: var(--light-gray);
   --font-georgia: "Georgia, serif";
+
+  --color-chat-mine: var(--chat-mine);
+  --color-chat-mine-hover: var(--chat-mine-hover);
+  --color-chat-mine-fg: var(--chat-mine-fg);
+  --color-chat-theirs: var(--chat-theirs);
+  --color-chat-theirs-fg: var(--chat-theirs-fg);
+  --color-chat-composer: var(--chat-composer);
+  --color-chat-composer-border: var(--chat-composer-border);
+  --color-chat-composer-placeholder: var(--chat-composer-placeholder);
+  --color-chat-ring: var(--chat-ring);
+  --color-chat-note: var(--chat-note);
+  --color-chat-note-border: var(--chat-note-border);
+  --color-chat-note-fg: var(--chat-note-fg);
 }
 
 :root {
@@ -111,6 +124,26 @@
   --heatmap-4-text: oklch(0.98 0 0);
   --heatmap-peak-badge: oklch(0.7 0.19 39);
   --heatmap-peak-text: oklch(0.98 0 0);
+
+  /* the viewer's own messages + send button */
+  --chat-mine: #0f5d5a;
+  --chat-mine-hover: #0b4b48;
+  --chat-mine-fg: #f3fffd;
+
+  /* messages from the other side */
+  --chat-theirs: #eeece6;
+  --chat-theirs-fg: #25221c;
+
+  /* writing bar */
+  --chat-composer: #f4f8f7;
+  --chat-composer-border: #c3d6d3;
+  --chat-composer-placeholder: #6b7f7d;
+  --chat-ring: #0f5d5a38;
+
+  /* internal notes (staff only) */
+  --chat-note: #fbf1d3;
+  --chat-note-border: #d4b34a;
+  --chat-note-fg: #5a4210;
 }
 
 .dark {
@@ -159,6 +192,22 @@
   --heatmap-4-text: oklch(0.12 0 0);
   --heatmap-peak-badge: oklch(0.7 0.19 39);
   --heatmap-peak-text: oklch(0.98 0 0);
+
+  --chat-mine: #1d7571;
+  --chat-mine-hover: #258782;
+  --chat-mine-fg: #f3fffd;
+
+  --chat-theirs: #2b2925;
+  --chat-theirs-fg: #ecebe5;
+
+  --chat-composer: #17211f;
+  --chat-composer-border: #2c4442;
+  --chat-composer-placeholder: #7f9a97;
+  --chat-ring: #34a39e4d;
+
+  --chat-note: #342b14;
+  --chat-note-border: #8f7628;
+  --chat-note-fg: #f0dfa8;
 }
 
 @layer base {
@@ -212,13 +261,23 @@
 }
 
 @keyframes loader-slide {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(400%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
 }
 
 @keyframes row-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

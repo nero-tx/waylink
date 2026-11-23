@@ -15,7 +15,7 @@ const mock: SupportTicketConversation = {
     id: "t-1",
     ticketNumber: "1042",
     userId: "u-1",
-    status: "in_progress",
+    status: "waiting_on_customer",
     providerId: "p-1",
     assigneeId: "s-1",
     category: "technical",
@@ -26,7 +26,7 @@ const mock: SupportTicketConversation = {
     createdAt: minutesAgo(180),
     updatedAt: minutesAgo(5),
     messageCount: 4,
-    hasStaffReply: true,  
+    hasStaffReply: true,
     provider: { id: "p-1", name: "Siwa Apothecary" },
     assignee: { id: "s-1", name: "Mona Adel", image: undefined },
   },
@@ -38,7 +38,7 @@ const mock: SupportTicketConversation = {
       isStaff: false,
       isInternal: false,
       body: "Hi, the jar in my order arrived with the seal already broken. Can you help?",
-      createdAt: minutesAgo(180),
+      createdAt: minutesAgo(18000),
       updatedAt: minutesAgo(180),
       author: { id: "u-1", name: "Tarek Fawzy" },
     },
@@ -89,7 +89,7 @@ const page = async ({ params }: Params) => {
   const { id } = await params;
 
   return (
-    <div className="h-full w-full overflow-x-hidden">
+    <div className="h-full w-full flex-1 flex flex-col min-h-0 overflow-hidden">
       <SupportConversationView initial={mock} viewer={viewer} />
     </div>
   );
