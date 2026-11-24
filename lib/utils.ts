@@ -491,7 +491,8 @@ interface BuildUrlOptions<T> {
   useDomain?: boolean;
 }
 
-export const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+export const baseURL =
+  process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
 /**
  * Merges an API path with a params object (e.g. `urlParams` from `useUrl`)
@@ -553,4 +554,13 @@ function isIgnored(value: UrlValue, rule: unknown): boolean {
     isEqual<unknown>(value, rule) ||
     rule.some((candidate) => isEqual<unknown>(value, candidate))
   );
+}
+
+export function safeNext(next?: string | null, fallback = "/") {
+  if (!next) return fallback;
+  if (!next.startsWith("/") || next.startsWith("//") || next.includes("\\")) {
+    return fallback;
+  }
+  if (next.startsWith("/login") || next.startsWith("/signup")) return fallback;
+  return next;
 }

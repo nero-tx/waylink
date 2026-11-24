@@ -3,10 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import React, { useState, useEffect, useRef, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { motion, Variants } from "framer-motion";
-
 import {
   Menu,
   X,
@@ -17,10 +14,15 @@ import {
   Bell,
   BookMarked,
   Heart,
+  Headset,
 } from "lucide-react";
-import { useAuth } from "./providers/AuthProvider";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
 import { useClickOutside } from "@/hooks/useClickOut";
+import { useActive } from "@/hooks/useActive";
+import { selectIsAuthenticated, useAuthStore } from "@/stores/auth.store";
+import { useLogout } from "./providers/AuthProvider";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -40,23 +42,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
-import { useActive } from "@/hooks/useActive";
+import { initials } from "@/lib/helpers";
 
 const navLinks = [
   { title: "Explore", href: "/", exact: true },
   { title: "Transports", href: "/transport" },
   { title: "Experiences", href: "/experiences" },
   { title: "Most Rating", href: "/most-rating" },
-    { title: "Providers", href: "/providers" },
+  { title: "Providers", href: "/providers" },
 ];
 
 const dropMenu = [
-  {
-    title: "Account",
-    icon: User,
-    href: "/account",
-    color: "text-blue-500",
-  },
+  { title: "Account", icon: User, href: "/account", color: "text-blue-500" },
   {
     title: "Notifications",
     icon: Bell,
@@ -75,80 +72,235 @@ const dropMenu = [
     href: "/account/wish-list",
     color: "text-red-500",
   },
+  {
+    title: "Support",
+    icon: Headset,
+    href: "/account/support",
+    color: "text-blue-500",
+  },
 ];
 
-export default function HeaderNavbar() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const { user, isAuthenticated, logout, loading, openModal } = useAuth();
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const toggleRef = useRef<HTMLButtonElement>(null);
-  const [isPending, startTransition] = useTransition();
+const menuVariants: Variants = {
+  hidden: { opacity: 0, y: -20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { staggerChildren: 0.1, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: -10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
+function UserAvatar({ name, image }: { name: string; image?: string | null }) {
+  return (
+    <Avatar className="h-9 w-9">
+      <AvatarImage src={image || undefined} alt={name} />
+      <AvatarFallback className="bg-linear-to-br from-orange-500 to-purple-600 text-white text-sm font-semibold">
+        {initials(name)}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
+
+function UserMenu() {
+  const user = useAuthStore((s) => s.user);
+  const logout = useLogout();
   const isActive = useActive();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener("scroll", handleScroll);
+  if (!user) return null;
 
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useClickOutside(menuRef, () => setMenuOpen(false), [toggleRef]);
-
-  const handleLogout = () => {
+  const handleLogout = (e: React.MouseEvent) => {
+    e.preventDefault(); // keep the dialog open (with spinner) until logout finishes
     startTransition(async () => {
       await logout();
+      setConfirmOpen(false);
     });
   };
 
-  // Motion variants
-  const menuVariants: Variants = {
-    hidden: { opacity: 0, y: -20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { staggerChildren: 0.1, ease: [0.16, 1, 0.3, 1] },
-    },
-  };
-
-  const itemVariants: Variants = {
-    hidden: { opacity: 0, y: -10 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
-    },
-  };
-
   return (
-    <header>
-      <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+    <>
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(open) => !isPending && setConfirmOpen(open)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm logout</AlertDialogTitle>
-            <AlertDialogDescription>
-              You’ll be logged out and. You can sign in again anytime.
+            <AlertDialogTitle className="text-lg font-semibold text-destructive tracking-tight">
+              Sign out of your account?
+            </AlertDialogTitle>
+
+            <AlertDialogDescription className="text-sm leading-relaxed">
+              You’re about to sign out of your current session. You’ll need to
+              sign in again to access your account.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLogout} disabled={isPending}>
+            <AlertDialogCancel disabled={isPending}>
+              <X className="h-4 w-4" />
+              Cancel
+            </AlertDialogCancel>
+
+            <AlertDialogAction
+              onClick={handleLogout}
+              disabled={isPending}
+              variant="destructive"
+            >
               {isPending ? (
                 <span className="flex items-center gap-2">
                   <Loader className="h-4 w-4 animate-spin" />
                   Logging out...
                 </span>
               ) : (
-                "Continue"
+                <span className="flex items-center gap-2">
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </span>
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <nav data-state={menuOpen && "active"} className="fixed z-9999 w-full px-2">
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            aria-label="Open user menu"
+            className="rounded-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <UserAvatar name={user.name} image={user.image} />
+          </button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" className="w-56 rounded-xl">
+          <DropdownMenuLabel className="font-normal flex items-center gap-2">
+            <UserAvatar name={user.name} image={user.image} />
+            <div className="flex min-w-0 flex-col">
+              <p className="truncate text-sm font-medium">{user.name}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {user.email}
+              </p>
+            </div>
+          </DropdownMenuLabel>
+
+          <DropdownMenuSeparator />
+
+          {dropMenu.map((l) => (
+            <DropdownMenuItem asChild key={l.href}>
+              <Link
+                href={l.href}
+                className={cn(
+                  "flex items-center gap-2 cursor-pointer font-medium text-muted-foreground",
+                  isActive(l.href, true) && "bg-accent",
+                )}
+              >
+                <l.icon className={cn("h-4 w-4", l.color)} />
+                {l.title}
+              </Link>
+            </DropdownMenuItem>
+          ))}
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onSelect={() => setConfirmOpen(true)}
+            variant="destructive"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+}
+
+// Right-side auth slot: skeleton while loading, Sign In, or the user menu.
+function AuthControls() {
+  const loading = useAuthStore((s) => s.loading);
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const openModal = useAuthStore((s) => s.openModal);
+
+  // Reserves the avatar's space so the navbar doesn't jump when the session resolves.
+  if (loading) {
+    return (
+      <div
+        className="h-9 w-9 animate-pulse rounded-full bg-muted"
+        aria-hidden
+      />
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Button
+        onClick={openModal}
+        className="hidden md:inline-flex bg-blue-600 text-white shadow-sm shadow-blue-600/20 hover:bg-blue-500 hover:shadow-md hover:shadow-blue-500/25"
+      >
+        <UserPlus className="h-4 w-4" />
+        Sign In
+      </Button>
+    );
+  }
+
+  return <UserMenu />;
+}
+
+function MobileSignIn({ onDone }: { onDone: () => void }) {
+  const loading = useAuthStore((s) => s.loading);
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const openModal = useAuthStore((s) => s.openModal);
+
+  if (loading || isAuthenticated) return null;
+
+  return (
+    <div className="px-2 mt-3">
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={() => {
+          onDone(); // close the mobile menu, then open the modal
+          openModal();
+        }}
+      >
+        <UserPlus className="h-4 w-4" />
+        Sign In
+      </Button>
+    </div>
+  );
+}
+
+export default function HeaderNavbar() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const isActive = useActive();
+
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 50);
+    onScroll(); // correct state if the page loads already scrolled
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useClickOutside(menuRef, () => setMenuOpen(false), [toggleRef]);
+
+  return (
+    <header>
+      <nav
+        data-state={menuOpen ? "active" : "inactive"}
+        className="fixed z-9999 w-full px-2"
+      >
         <div
           className={cn(
             "mx-auto mt-2 container px-6 transition-all duration-300 lg:px-12",
@@ -180,115 +332,39 @@ export default function HeaderNavbar() {
               animate="visible"
               variants={menuVariants}
             >
-              {navLinks.map((link) => (
-                <motion.li key={link.href} variants={itemVariants}>
-                  <Link
-                    href={link.href}
-                    className={cn(
-                      "relative px-3 py-1.5 text-sm font-medium rounded-lg transition-all",
-                      "text-muted-foreground hover:text-foreground hover:bg-accent/50",
-                      isActive(link.href, link.exact) &&
-                        "text-primary bg-accent/80 hover:bg-accent",
-                    )}
-                  >
-                    {link.title}
-                    {isActive(link.href) && (
-                      <span className="absolute left-1/2 -bottom-0.5 h-0.5 w-5 -translate-x-1/2 rounded-full bg-primary" />
-                    )}
-                  </Link>
-                </motion.li>
-              ))}
+              {navLinks.map((link) => {
+                const active = isActive(link.href, link.exact);
+                return (
+                  <motion.li key={link.href} variants={itemVariants}>
+                    <Link
+                      href={link.href}
+                      className={cn(
+                        "relative px-3 py-1.5 text-sm font-medium rounded-lg transition-all",
+                        "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                        active && "text-primary bg-accent/80 hover:bg-accent",
+                      )}
+                    >
+                      {link.title}
+                      {active && (
+                        <span className="absolute left-1/2 -bottom-0.5 h-0.5 w-5 -translate-x-1/2 rounded-full bg-primary" />
+                      )}
+                    </Link>
+                  </motion.li>
+                );
+              })}
             </motion.ul>
 
-            <div className="flex items-center gap-3 z-50">
+            <div className="flex items-center gap-2 z-50">
               <ThemeToggle />
-
-              {!loading && !isAuthenticated && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={openModal}
-                  className="hidden md:flex"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Sign In
-                </Button>
-              )}
-
-              {!loading && isAuthenticated && user && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                      <Avatar className="w-9 h-9 cursor-pointer">
-                        <AvatarImage src={user.image} alt={user.name} />
-                        <AvatarFallback className="bg-linear-to-br from-orange-500 to-purple-600 text-white text-sm font-semibold">
-                          {user.name.slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </button>
-                  </DropdownMenuTrigger>
-
-                  <DropdownMenuContent align="end" className="w-56 rounded-xl">
-                    {/* User Info */}
-                    <DropdownMenuLabel className="font-normal flex items-center gap-2">
-                      <Avatar className="w-9 h-9 cursor-pointer">
-                        <AvatarImage src={user.image} alt={user.name} />
-                        <AvatarFallback className="bg-linear-to-br from-orange-500 to-purple-600 text-white text-sm font-semibold">
-                          {user.name.slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <p className="text-sm font-medium">{user.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {user.email}
-                        </p>
-                      </div>
-                    </DropdownMenuLabel>
-
-                    <DropdownMenuSeparator />
-
-                    {/* Menu Links */}
-                    {dropMenu.map((l) => (
-                      <DropdownMenuItem asChild key={l.href}>
-                        <Link
-                          href={l.href}
-                          className={cn(
-                            "flex items-center gap-2 cursor-pointer font-medium text-muted-foreground",
-                            isActive(l.href) && "bg-accent",
-                          )}
-                        >
-                          <l.icon className={cn("h-4 w-4", l.color)} />
-                          {l.title}
-                        </Link>
-                      </DropdownMenuItem>
-                    ))}
-
-                    <DropdownMenuSeparator />
-
-                    <DropdownMenuItem
-                      className="text-red-600 focus:text-red-600 cursor-pointer"
-                      onClick={() => setIsOpen(true)}
-                    >
-                      {isPending ? (
-                        <>
-                          <Loader className="animate-spin w-4 h-4" />
-                        </>
-                      ) : (
-                        <>
-                          <LogOut className="mr-2 h-4 w-4" />
-                        </>
-                      )}
-                      Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+              <AuthControls />
 
               <Button
                 variant="outline"
                 size="icon"
                 className="md:hidden"
-                onClick={() => setMenuOpen(!menuOpen)}
+                aria-label={menuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((o) => !o)}
                 ref={toggleRef}
               >
                 {menuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -324,18 +400,7 @@ export default function HeaderNavbar() {
                     </Link>
                   </motion.div>
                 ))}
-                <div className="px-2 mt-3">
-                  {!loading && !isAuthenticated && (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={openModal}
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      Sign In
-                    </Button>
-                  )}
-                </div>
+                <MobileSignIn onDone={() => setMenuOpen(false)} />
               </motion.div>
             )}
           </div>

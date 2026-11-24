@@ -1,84 +1,65 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import AuthModal from "../AuthModel";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { User } from "@/lib/all-types";
-
-interface AuthContextType {
-  isAuthenticated: boolean;
-  user: User | null;
-  loading: boolean;
-  openModal: () => void;
-  closeModal: () => void;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { selectIsAuthenticated, useAuthStore } from "@/stores/auth.store";
+import { useShallow } from "zustand/react/shallow";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const router = useRouter();
+  // which the old one-time getSession() call missed.
+  const { data, isPending } = authClient.useSession();
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const setSession = useAuthStore((s) => s.setSession);
+  const isModalOpen = useAuthStore((s) => s.isModalOpen);
+  const closeModal = useAuthStore((s) => s.closeModal);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const session = await authClient.getSession();
-        if (session.data?.user) {
-          setUser(session.data.user);
-          setIsModalOpen(false);
-        }
-      } catch (err) {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUser();
-  }, []);
-
-  const logout = async () => {
-    try {
-      router.replace("/");
-
-      setTimeout(async () => {
-        await authClient.signOut();
-
-        setUser(null);
-        router.refresh();
-        toast.success("Signed out successfully!");
-      }, 50);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to log out");
-    }
-  };
+    if (isPending) return;
+    const user = (data?.user as User) ?? null;
+    setSession(user);
+  }, [data, isPending, setSession]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated: !!user,
-        user,
-        loading,
-        openModal,
-        closeModal,
-        logout,
-      }}
-    >
+    <>
       {children}
       <AuthModal isOpen={isModalOpen} onClose={closeModal} />
-    </AuthContext.Provider>
+    </>
   );
 }
 
+export function useLogout() {
+  const router = useRouter();
+  const setSession = useAuthStore((s) => s.setSession);
+
+  return useCallback(async () => {
+    // leave protected pages first, as before
+    router.replace("/");
+    try {
+      await authClient.signOut();
+      setSession(null);
+      router.refresh();
+      toast.success("Signed out successfully!");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to log out");
+    }
+  }, [router, setSession]);
+}
+
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within an AuthProvider");
-  return context;
+  const logout = useLogout();
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const { user, loading, openModal, closeModal } = useAuthStore(
+    useShallow((s) => ({
+      user: s.user,
+      loading: s.loading,
+      openModal: s.openModal,
+      closeModal: s.closeModal,
+    })),
+  );
+
+  return { isAuthenticated, user, loading, openModal, closeModal, logout };
 }
