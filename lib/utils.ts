@@ -491,7 +491,7 @@ interface BuildUrlOptions<T> {
   useDomain?: boolean;
 }
 
-const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+export const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
 /**
  * Merges an API path with a params object (e.g. `urlParams` from `useUrl`)

@@ -2,7 +2,12 @@
 
 import { db } from "@/db";
 import { supportMessages, supportTickets } from "@/db/schemas";
-import { Actor, SupportStatus } from "@/lib/all-types";
+import {
+  Actor,
+  SupportMessage,
+  SupportStatus,
+  SupportTicketConversation,
+} from "@/lib/all-types";
 import { parseQuery } from "@/lib/query_parser/analyzer";
 import {
   buildSearchQuery,
@@ -46,7 +51,10 @@ function getStatusCounts(
   } satisfies Record<StatusFilter, number>;
 }
 
-export async function listTicketService(urlParams: URLSearchParams, actor: Actor) {
+export async function listTicketService(
+  urlParams: URLSearchParams,
+  actor: Actor,
+) {
   const { query } = parseQuery(urlParams);
   const limit = Number(query?.limit ?? 10);
   const offset = Number(query?.offset ?? 0);
@@ -148,4 +156,56 @@ export async function listTicketService(urlParams: URLSearchParams, actor: Actor
   };
 
   return { tickets, pagination, counts };
+}
+
+export async function ticketIssues(
+  ticketId: string,
+): Promise<SupportTicketConversation> {
+  const result = await db.query.supportTickets.findFirst({
+    where: (tickets, { eq }) => eq(tickets.id, ticketId),
+    columns: {
+      searchVector: false,
+    },
+    with: {
+      messages: {
+        orderBy: (m, { asc }) => asc(m.createdAt),
+        with: {
+          author: {
+            columns: { id: true, name: true, image: true },
+          },
+        },
+      },
+      provider: { columns: { id: true, name: true } },
+      assignee: {
+        columns: { id: true, name: true, image: true },
+      },
+    },
+  });
+
+  console.log(result)
+  if (!result) throw new Error("No Data Found");
+
+  const { assignee, messages, provider, ...data } = result;
+
+  const messagesOut: SupportMessage[] = messages.map(({ author, ...m }) => ({
+    ...m,
+    author: {
+      id: author?.id ?? "",
+      name: author?.name ?? "Unknown",
+      image: author?.image ?? undefined,
+    },
+  }));
+
+  return {
+    messages: messagesOut,
+    ticket: {
+      ...data,
+      provider,
+      assignee: assignee
+        ? { ...assignee, image: assignee.image ?? undefined }
+        : null,
+      messageCount: messages.length,
+      hasStaffReply: messages.some((m) => m.isStaff && !m.isInternal),
+    },
+  };
 }

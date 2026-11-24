@@ -179,7 +179,7 @@ export default function UserLayout({
   const currentLabel = currentPage?.label ?? "Support Center";
 
   return (
-    <div className="h-screen font-sans flex overflow-hidden bg-background">
+    <div className="min-h-screen font-sans flex">
       <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -204,7 +204,7 @@ export default function UserLayout({
         </AlertDialogContent>
       </AlertDialog>
 
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border/70 bg-card/60 backdrop-blur-xl h-full">
+      <aside className="hidden lg:flex flex-col w-64 shrink-0 border-r border-border/70 bg-card/60 backdrop-blur-xl sticky top-0 h-screen">
         <SidebarContent />
       </aside>
       <AnimatePresence>
@@ -241,8 +241,8 @@ export default function UserLayout({
         )}
       </AnimatePresence>
 
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        <header className="shrink-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur-lg">
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="sticky top-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur-lg">
           <div className="p-3.5 px-4 md:px-6 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button

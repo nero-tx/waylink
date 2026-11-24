@@ -1,10 +1,13 @@
 import { getAuthSession } from "@/lib/auth-server";
+import { generateKey, getCache, setCache } from "@/lib/cache";
 import { getCurrentProvider } from "@/lib/provider-auth";
-import { listTicketService } from "@/services/support.service";
+import { listTicketService, ticketIssues } from "@/services/support.service";
 
 type Actor =
   | { role: "user" | "admin"; userId: string }
   | { role: "provider"; userId: string; providerId: string };
+
+const CACHEAVGTTL = 500;
 
 async function requireProvider(secure?: boolean) {
   const { provider, role, status } = await getCurrentProvider();
@@ -62,5 +65,20 @@ export function listTicketsController(
 ) {
   return withActor(role, async (actor) => {
     return await listTicketService(params, actor);
+  });
+}
+
+export function getTicketIssues(id: string) {
+  return withActor("user", async (actor) => {
+    if (!id) throw new Error("Missing Ticket Id.");
+    const key = generateKey("ticket", "issue", id);
+    const cache = await getCache(key);
+
+    if (cache) return cache;
+
+    const data = await ticketIssues(id);
+    if (data) await setCache(key, data, CACHEAVGTTL);
+
+    return data;
   });
 }
