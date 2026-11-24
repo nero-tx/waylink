@@ -564,3 +564,12 @@ export function safeNext(next?: string | null, fallback = "/") {
   if (next.startsWith("/login") || next.startsWith("/signup")) return fallback;
   return next;
 }
+
+
+export function getReturnPath(fallback = "/") {
+  if (typeof window === "undefined") return fallback;
+  const { pathname, search } = window.location;
+  if (["/login", "/signup"].some((p) => pathname.startsWith(p)))
+    return fallback;
+  return pathname + search;
+}

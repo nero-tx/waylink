@@ -10,18 +10,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/unauthorized");
-    }
+    if (!loading && !user)
+      router.replace(`/login?next=${encodeURIComponent(`/account`)}`);
   }, [loading, user, router]);
 
-  if (loading) {
-    return <RoleCheckLoader />;
-  }
+  if (loading) return <RoleCheckLoader />;
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return <>{children}</>;
 }

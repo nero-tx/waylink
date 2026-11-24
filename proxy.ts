@@ -6,7 +6,9 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   const isProtected =
-    pathname.startsWith("/admin") || pathname.startsWith("/provider");
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/provider") ||
+    pathname.startsWith("/account");
 
   try {
     const session = await auth.api.getSession({
@@ -15,7 +17,7 @@ export async function proxy(request: NextRequest) {
 
     if (!session) {
       if (isProtected) {
-        return NextResponse.redirect(new URL("/not-found", request.url));
+        return NextResponse.redirect(new URL("/login", request.url));
       }
 
       return NextResponse.next();

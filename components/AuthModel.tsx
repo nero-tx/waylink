@@ -30,14 +30,15 @@ import {
   SignUpData,
 } from "@/validations";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { AuthLink } from "@/app/(auth)/_components/AuthLink";
 
-interface AuthModalProps {
+export default function AuthModal({
+  isOpen,
+  onClose,
+}: {
   isOpen: boolean;
   onClose: () => void;
-}
-
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+}) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [githubPending, startGithubTrans] = useTransition();
   const [GooglePending, startGoogleTrans] = useTransition();
@@ -64,20 +65,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const onSignIn = (data: SignInData) => {
     startTransition(async () => {
       const res = await signIn(data);
-      if (res?.success) {
-        toast.success(res.message);
-        router.push("/account");
-      }
+      if (res?.success) router.push("/account");
     });
   };
 
   const onSignUp = (data: SignUpData) => {
     startTransition(async () => {
       const res = await signUp(data);
-      if (res?.success) {
-        toast.success(res.message);
-        router.push("/account");
-      }
+      if (res?.success) router.push("/account");
     });
   };
 
@@ -101,7 +96,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-120 p-0 gap-0 bg-transparent border-none shadow-none overflow-hidden">
+      <DialogContent className="p-0 gap-0 bg-transparent border-none shadow-none overflow-hidden">
         <div className="relative">
           {/* Geometric background elements */}
           <div className="absolute -top-20 -left-20 w-40 h-40 bg-blue-500/20 dark:bg-blue-500/10 rounded-full blur-3xl" />
@@ -110,7 +105,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           {/* Main container */}
           <div className="relative bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-gray-200/50 dark:border-gray-800/50 overflow-hidden">
             {/* Header */}
-            <DialogHeader className="px-8 pt-8 pb-6 space-y-3">
+            <DialogHeader className="px-8 py-6 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-linear-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 rotate-3">
@@ -118,10 +113,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   </div>
                   <div>
                     <DialogTitle className="text-2xl font-bold font-mono tracking-tight bg-linear-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                      {isSignUp ? "CREATE_ACCOUNT" : "AUTHENTICATE"}
+                      {isSignUp ? "Create Account" : "Authenticated"}
                     </DialogTitle>
-                    <DialogDescription className="text-xs font-mono text-purple-500 mt-1">
-                      {"// "}
+                    <DialogDescription className="text-xs font-mono text-purple-500">
                       {isSignUp ? (
                         <>
                           <span className="text-green-500">Register</span> new{" "}
@@ -141,12 +135,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
             {/* Content */}
             <div className="px-8 pb-8">
-              {/* Social Auth Buttons */}
               <div className="space-y-3 mb-6">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="h-0.5 flex-1 bg-linear-to-r from-transparent via-purple-500 to-transparent" />
-                  <span className="font-mono text-xs text-gray-500 dark:text-gray-400 tracking-wider">
-                    OAUTH_PROVIDERS
+                  <span className="font-mono text-xs text-muted-foreground tracking-wider">
+                    OAuth Providers
                   </span>
                   <div className="h-0.5 flex-1 bg-linear-to-r from-transparent via-purple-500 to-transparent" />
                 </div>
@@ -168,8 +161,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         <Image
                           src="/icons/google.svg"
                           alt="google-logo"
-                          width={18}
-                          height={18}
+                          width={20}
+                          height={20}
+                          className="size-5"
                         />
                       </>
                     )}
@@ -188,7 +182,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       </>
                     ) : (
                       <>
-                        <Github className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
+                        <Github className="size-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                       </>
                     )}
                     Continue with Github
@@ -198,8 +192,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
               <div className="flex items-center gap-2 my-6">
                 <div className="h-0.5 flex-1 bg-linear-to-r from-transparent via-green-500 to-transparent" />
-                <span className="font-mono text-xs text-gray-500 dark:text-gray-400 tracking-wider">
-                  OR_CREDENTIALS
+                <span className="font-mono text-xs text-muted-foreground tracking-wider">
+                  Or Credentials
                 </span>
                 <div className="h-0.5 flex-1 bg-linear-to-r from-transparent via-green-500 to-transparent" />
               </div>
@@ -381,45 +375,45 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 </Form>
               )}
 
-              {/* Toggle Sign In/Up */}
-              <div className="mt-6 pt-6 border-t-2 border-gray-200 dark:border-gray-800">
-                <p className="text-center text-sm font-mono text-gray-600 dark:text-gray-400">
-                  {isSignUp ? (
-                    <>
-                      <span className="text-gray-500">
-                        // Already registered?
-                      </span>{" "}
-                      <button
-                        type="button"
-                        onClick={toggleMode}
-                        className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
-                        disabled={isPending}
-                      >
-                        SIGN_IN
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-gray-500">// New user?</span>{" "}
-                      <button
-                        type="button"
-                        onClick={toggleMode}
-                        className="text-purple-600 dark:text-purple-400 hover:underline font-semibold"
-                        disabled={isPending}
-                      >
-                        CREATE_ACCOUNT
-                      </button>
-                    </>
-                  )}
-                </p>
-              </div>
+              {/* Toggle Sign In/Up + Full Page Option */}
+              <div className="mt-6 pt-6 border-t">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <p className="text-center text-sm text-muted-foreground">
+                    {isSignUp ? (
+                      <>
+                        Already registered?{" "}
+                        <button
+                          type="button"
+                          onClick={toggleMode}
+                          className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                          disabled={isPending}
+                        >
+                          Sign In
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        New user?{" "}
+                        <button
+                          type="button"
+                          onClick={toggleMode}
+                          className="text-purple-600 dark:text-purple-400 hover:underline font-semibold"
+                          disabled={isPending}
+                        >
+                          Create Account
+                        </button>
+                      </>
+                    )}
+                  </p>
 
-              {/* Status indicator */}
-              <div className="mt-4 flex items-center justify-center gap-2 text-xs font-mono text-gray-400">
-                <div
-                  className={`w-2 h-2 rounded-full animate-pulse ${isPending ? "bg-red-500" : "bg-green-500"}`}
-                />
-                <span>STATUS: {isPending ? "PROCESSING..." : "READY"}</span>
+                  <div className="text-center">
+                    <Button variant="link" asChild size="sm">
+                      <AuthLink page={isSignUp ? "/signup" : "/login"}>
+                        Open full page <span aria-hidden="true">↗</span>
+                      </AuthLink>
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
