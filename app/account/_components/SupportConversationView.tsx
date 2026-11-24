@@ -2,7 +2,7 @@
 
 import { SupportTicketConversation, SupportViewer } from "@/lib/all-types";
 import { useSupportStore } from "@/stores/support.store";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import {
   MessageComposer,
   TicketDetailsPanel,
@@ -10,16 +10,38 @@ import {
 } from "./MessageElements";
 import { SupportMessageItem } from "./SupportMessageItem";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { MessageSquare } from "lucide-react";
+import { Lock, LogIn, MessageSquare, UserPlus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuthStore } from "@/stores/auth.store";
+import { Button } from "@/components/ui/button";
+import { AuthLink } from "@/app/(auth)/_components/AuthLink";
 
-type Props = {
-  initial: SupportTicketConversation;
-  viewer: SupportViewer;
+const getViwer = (): SupportViewer | null => {
+  const user = useAuthStore((s) => s.user);
+
+  return useMemo(
+    () =>
+      user
+        ? {
+            id: user.id,
+            image: user.image ?? null,
+            isStaff: user.role === "admin",
+            name: user.name,
+          }
+        : null,
+    [user],
+  );
 };
 
-export function SupportConversationView({ initial, viewer }: Props) {
+export function SupportConversationView({
+  initial,
+}: {
+  initial: SupportTicketConversation;
+}) {
+  const viewer = getViwer();
   const ticketId = initial.ticket.id;
+
+  if (!viewer) return <NoViewer />;
 
   const conversation = useSupportStore((s) => s.conversations[ticketId]);
   const setConversation = useSupportStore((s) => s.setConversation);
@@ -137,6 +159,63 @@ export function SupportConversationView({ initial, viewer }: Props) {
           <TicketDetailsPanel ticket={ticket} />
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+function NoViewer({
+  title = "Sign In Required",
+  description = "You need to be signed in to view this page.",
+}: {
+  title?: string;
+  description?: string;
+}) {
+  const openModal = useAuthStore((s) => s.openModal);
+
+  return (
+    <div
+      role="status"
+      className="flex h-full w-full flex-1 items-center justify-center p-6"
+    >
+      <div className="relative w-full max-w-md">
+        <div className="absolute -top-16 -left-16 h-32 w-32 rounded-full bg-blue-500/20 blur-3xl dark:bg-blue-500/10" />
+        <div className="absolute -right-16 -bottom-16 h-32 w-32 rounded-full bg-purple-500/20 blur-3xl dark:bg-purple-500/10" />
+
+        <div className="relative flex flex-col items-center gap-5 rounded-3xl border-2 border-gray-200/50 bg-white/95 px-8 py-10 text-center shadow-2xl backdrop-blur-xl dark:border-gray-800/50 dark:bg-gray-950/95">
+          <div className="flex h-14 w-14 rotate-3 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-purple-600 shadow-lg shadow-blue-500/30">
+            <Lock className="h-7 w-7 text-white" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text font-mono text-xl font-bold tracking-tight text-transparent dark:from-blue-400 dark:to-purple-400">
+              {title}
+            </h2>
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
+
+          <div className="flex w-full flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              className="flex-1 cursor-pointer"
+              onClick={openModal}
+            >
+              <LogIn className="h-4 w-4" />
+              Sign in
+            </Button>
+            <Button asChild variant="outline">
+              <AuthLink page="/signup" className="flex-1 cursor-pointer">
+                <UserPlus className="h-4 w-4" />
+                Create account
+              </AuthLink>
+            </Button>
+          </div>
+
+          <p className="font-mono text-xs text-gray-400">
+            <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-red-500 align-middle" />
+            Status: Unauthenticated
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

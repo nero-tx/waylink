@@ -1,96 +1,92 @@
-import React from "react";
+import { cache, Suspense } from "react";
+import type { Metadata } from "next";
 import { SupportConversationView } from "../../_components/SupportConversationView";
-import { SupportTicketConversation, SupportViewer } from "@/lib/all-types";
+import { SupportTicketConversation } from "@/lib/all-types";
+import { SupportConversationSkeleton } from "../../_components/MessageElements";
+import { TicketStateCard } from "../../_components/TicketStateCard";
+import { listTicketIssue } from "@/actions/support.action";
 
 type Params = {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 };
 
-const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
-
-const mock: SupportTicketConversation = {
+const reviveDates = (
+  c: SupportTicketConversation,
+): SupportTicketConversation => ({
   ticket: {
-    id: "t-1",
-    ticketNumber: "1042",
-    userId: "u-1",
-    status: "waiting_on_customer",
-    providerId: "p-1",
-    assigneeId: "s-1",
-    category: "technical",
-    subject: "My order arrived with a broken seal",
-    priority: "high",
-    lastMessageAt: minutesAgo(5),
-    closedAt: null,
-    createdAt: minutesAgo(180),
-    updatedAt: minutesAgo(5),
-    messageCount: 4,
-    hasStaffReply: true,
-    provider: { id: "p-1", name: "Siwa Apothecary" },
-    assignee: { id: "s-1", name: "Mona Adel", image: undefined },
+    ...c.ticket,
+    lastMessageAt: new Date(c.ticket.lastMessageAt),
+    closedAt: c.ticket.closedAt ? new Date(c.ticket.closedAt) : null,
+    createdAt: new Date(c.ticket.createdAt),
+    updatedAt: new Date(c.ticket.updatedAt),
   },
-  messages: [
-    {
-      id: "m-1",
-      ticketId: "t-1",
-      authorId: "u-1",
-      isStaff: false,
-      isInternal: false,
-      body: "Hi, the jar in my order arrived with the seal already broken. Can you help?",
-      createdAt: minutesAgo(18000),
-      updatedAt: minutesAgo(180),
-      author: { id: "u-1", name: "Tarek Fawzy" },
-    },
-    {
-      id: "m-2",
-      ticketId: "t-1",
-      authorId: "s-1",
-      isStaff: true,
-      isInternal: false,
-      body: "Sorry about that. Could you send a photo of the jar and the packaging?",
-      createdAt: minutesAgo(120),
-      updatedAt: minutesAgo(120),
-      author: { id: "s-1", name: "Mona Adel" },
-    },
-    {
-      id: "m-3",
-      ticketId: "t-1",
-      authorId: "s-1",
-      isStaff: true,
-      isInternal: true,
-      body: "Check the courier log: this batch had two other seal complaints.",
-      createdAt: minutesAgo(60),
-      updatedAt: minutesAgo(60),
-      author: { id: "s-1", name: "Mona Adel" },
-    },
-    {
-      id: "m-4",
-      ticketId: "t-1",
-      authorId: "u-1",
-      isStaff: false,
-      isInternal: false,
-      body: "Photos attached in the order page. Thanks for the quick reply!",
-      createdAt: minutesAgo(5),
-      updatedAt: minutesAgo(5),
-      author: { id: "u-1", name: "Tarek Fawzy" },
-    },
-  ],
-};
+  messages: c.messages.map((m) => ({
+    ...m,
+    createdAt: new Date(m.createdAt),
+    updatedAt: new Date(m.updatedAt),
+  })),
+});
 
-const viewer: SupportViewer = {
-  id: "u-1",
-  name: "Tarek Fawzy",
-  image: null,
-  isStaff: false,
-};
+const getConversation = cache(async (id: string) => {
+  const res = await listTicketIssue(id);
+
+  if (!res.ok || !res.data) {
+    return {
+      ok: false as const,
+      data: null,
+      error: res.error,
+    };
+  }
+
+  return {
+    ok: true as const,
+    data: reviveDates(res.data),
+    error: null,
+  };
+});
+
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const { id } = await params;
+  const robots = { index: false, follow: false } as const;
+
+  const result = await getConversation(id);
+
+  if (!result.ok || !result.data) {
+    return { title: "Support ticket", robots };
+  }
+
+  const { ticketNumber, subject, status } = result.data.ticket;
+
+  return {
+    title: `#${ticketNumber} · ${subject}`,
+    description: `Support ticket #${ticketNumber} (${status.replaceAll("_", " ")})`,
+    robots,
+  };
+}
+
+async function ConversationLoader({ id }: { id: string }) {
+  const result = await getConversation(id);
+
+  if (!result.ok || !result.data) {
+    return (
+      <TicketStateCard
+        variant={result.error ? "error" : "not-found"}
+        error={result.error ?? undefined}
+      />
+    );
+  }
+
+  return <SupportConversationView initial={result.data} />;
+}
 
 const page = async ({ params }: Params) => {
   const { id } = await params;
 
   return (
-    <div className="h-full w-full flex-1 flex flex-col min-h-0 overflow-hidden">
-      <SupportConversationView initial={mock} viewer={viewer} />
+    <div className="flex h-full w-full flex-1 min-h-0 flex-col">
+      <Suspense fallback={<SupportConversationSkeleton />}>
+        <ConversationLoader id={id} />
+      </Suspense>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import { SupportTicketConversation } from "@/lib/all-types";
 import { getAuthSession } from "@/lib/auth-server";
 import { generateKey, getCache, setCache } from "@/lib/cache";
 import { getCurrentProvider } from "@/lib/provider-auth";
@@ -68,11 +69,12 @@ export function listTicketsController(
   });
 }
 
-export function getTicketIssues(id: string) {
-  return withActor("user", async (actor) => {
-    if (!id) throw new Error("Missing Ticket Id.");
+export async function getTicketIssuesController(
+  id: string,
+): Promise<SupportTicketConversation | null> {
+  return withActor("user", async (_) => {
     const key = generateKey("ticket", "issue", id);
-    const cache = await getCache(key);
+    const cache = await getCache<SupportTicketConversation>(key);
 
     if (cache) return cache;
 

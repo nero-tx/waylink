@@ -30,6 +30,7 @@ import { cn, formatTicketDate } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initials } from "@/lib/helpers";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Ticket = SupportTicketConversation["ticket"];
 const MAX_LENGTH = 4000;
@@ -554,5 +555,65 @@ function ModeButton({
     >
       {children}
     </button>
+  );
+}
+
+const Bubble = ({ mine }: { mine?: boolean }) => (
+  <div
+    className={`flex items-end gap-3 ${mine ? "justify-end" : "justify-start"}`}
+  >
+    {!mine && <Skeleton className="size-8 shrink-0 rounded-full" />}
+
+    <div
+      className={`flex max-w-[75%] flex-col gap-2 rounded-2xl p-4 ${
+        mine ? "rounded-br-md bg-primary/5" : "rounded-bl-md bg-muted/50"
+      }`}
+    >
+      <Skeleton className={`h-3 ${mine ? "w-40" : "w-56"}`} />
+      <Skeleton className={`h-3 ${mine ? "w-28" : "w-44"}`} />
+      {!mine && <Skeleton className="h-3 w-20" />}
+    </div>
+
+    {mine && <Skeleton className="size-8 shrink-0 rounded-full" />}
+  </div>
+);
+
+export function SupportConversationSkeleton() {
+  return (
+    <div
+      className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading conversation"
+    >
+      <div className="flex items-center justify-between border-b px-5 py-4">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-10 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+        </div>
+
+        <Skeleton className="h-7 w-20 rounded-full" />
+      </div>
+
+      <div className="flex flex-1 flex-col justify-end gap-6 overflow-hidden p-5">
+        <Bubble />
+        <Bubble mine />
+        <Bubble />
+        <Bubble mine />
+        <Bubble />
+      </div>
+
+      <div className="border-t p-4">
+        <div className="flex items-end gap-3 rounded-xl border bg-muted/20 p-3">
+          <Skeleton className="h-10 flex-1 rounded-lg" />
+          <Skeleton className="size-10 shrink-0 rounded-lg" />
+        </div>
+      </div>
+
+      <span className="sr-only">Loading conversation...</span>
+    </div>
   );
 }

@@ -16,6 +16,7 @@ import { authGuard } from "./service.action";
 import { getAuthSession } from "@/lib/auth-server";
 import { customAlphabet } from "nanoid";
 import { randomInt } from "node:crypto";
+import { getTicketIssuesController } from "@/controllers/support.controller";
 
 type SupportRole = "user" | "provider";
 type ActionError = {
@@ -299,5 +300,34 @@ export async function deleteSupportTicket(
   } catch (error) {
     console.error("[support] deleteSupportTicket", error);
     return fail("Couldn't delete the ticket. Try again.");
+  }
+}
+
+export async function listTicketIssue(ticketId: string) {
+  try {
+    if (!ticketId) throw new Error("Missing Ticket ID.");
+    const data = await getTicketIssuesController(ticketId);
+
+    if (!data) {
+      return {
+        ok: false,
+        data: null,
+        error: "Ticket issues not found.",
+      };
+    }
+
+    return {
+      ok: true,
+      data,
+      error: null,
+    };
+  } catch (error) {
+    console.error("listTicketIssue:", error);
+
+    return {
+      ok: false,
+      data: null,
+      error: "Failed to fetch ticket issues. Please try again later.",
+    };
   }
 }
