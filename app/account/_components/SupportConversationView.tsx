@@ -157,7 +157,7 @@ export function SupportConversationView({
   };
 
   return (
-    <div className="flex h-full w-full flex-col min-h-0 overflow-hidden bg-background">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-background relative">
       <TicketTopBar
         ticket={ticket}
         showDetails={showDetails}
@@ -167,12 +167,12 @@ export function SupportConversationView({
         }}
       />
 
-      <div className="flex flex-1 min-h-0 overflow-hidden relative">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <section
-          className="flex flex-1 min-h-0 flex-col overflow-hidden relative bg-background"
+          className="flex flex-1 w-full min-h-0 flex-col overflow-hidden relative bg-background min-w-0"
           aria-label="Conversation"
         >
-          <ScrollArea className="flex-1 min-h-0 px-4 py-6 sm:px-6">
+          <ScrollArea className="flex-1 min-h-0 px-4 py-3 sm:px-6">
             <div className="flex w-full flex-col gap-0">
               {visibleMessages.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -202,12 +202,14 @@ export function SupportConversationView({
             </div>
           </ScrollArea>
 
-          <MessageComposer
-            disabled={isClosed}
-            canWriteInternal={viewer.isStaff}
-            onReopen={() => reopenTicket(ticketId)}
-            onSend={createMessage}
-          />
+          <div className="shrink-0 ">
+            <MessageComposer
+              disabled={isClosed}
+              canWriteInternal={viewer.isStaff}
+              onReopen={() => reopenTicket(ticketId)}
+              onSend={createMessage}
+            />
+          </div>
         </section>
 
         {/* Desktop Fixed Details Sidebar */}

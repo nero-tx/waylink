@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Clock,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { useSupportStore } from "@/stores/support.store";
 import type { SupportTicketConversation } from "@/lib/all-types";
@@ -32,6 +33,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initials } from "@/lib/helpers";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type Ticket = SupportTicketConversation["ticket"];
 const MAX_LENGTH = 4000;
@@ -53,7 +56,7 @@ export function TicketTopBar({
   const isClosed = ticket.status === "closed";
 
   return (
-    <header className="shrink-0 border-b border-border/70 bg-card/40 backdrop-blur-md px-3 sm:px-5 py-2.5 sm:py-3 transition-colors">
+    <div className="shrink-0 border-b border-border/70 bg-card/40 backdrop-blur-md px-3 sm:px-5 py-2.5 sm:py-3 transition-colors">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <div className="min-w-0">
@@ -113,7 +116,7 @@ export function TicketTopBar({
           )}
         </div>
       </div>
-    </header>
+    </div>
   );
 }
 
@@ -132,217 +135,277 @@ export function TicketDetailsPanel({ ticket }: { ticket: Ticket }) {
     ticket.status === "waiting_on_customer";
 
   return (
-    <div className="h-full flex flex-col min-h-0 overflow-y-auto p-4 sm:p-5 space-y-3 bg-card/20">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <Hash className="size-4 text-primary" />
-          <h2 className="text-sm font-semibold tracking-tight text-foreground">
-            Ticket Details
-          </h2>
-        </div>
-      </div>
-
-      {alert && (
-        <div
-          className={cn(
-            "flex items-start gap-3 rounded-xl border px-4 py-3",
-            ticket.status === "resolved"
-              ? "border-amber-500/20 bg-amber-500/5 text-amber-700 dark:border-amber-500/15 dark:bg-amber-500/10 dark:text-amber-400"
-              : ticket.status === "waiting_on_customer"
-                ? "border-sky-500/20 bg-sky-500/5 text-sky-700 dark:border-sky-500/15 dark:bg-sky-500/10 dark:text-sky-400"
-                : "border-border bg-muted/50 text-muted-foreground",
-          )}
-        >
-          {ticket.status === "resolved" ? (
-            <AlertCircle className="mt-0.5 size-4 shrink-0" />
-          ) : ticket.status === "waiting_on_customer" ? (
-            <Clock className="mt-0.5 size-4 shrink-0" />
-          ) : (
-            <Lock className="mt-0.5 size-4 shrink-0" />
-          )}
-
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">
-              {ticket.status === "resolved"
-                ? "Ticket resolved"
-                : ticket.status === "waiting_on_customer"
-                  ? "Waiting for your response"
-                  : "Ticket closed"}
-            </p>
-
-            <p
-              className={cn(
-                "text-xs leading-relaxed",
-                ticket.status === "resolved"
-                  ? "text-amber-700/80 dark:text-amber-400/80"
-                  : ticket.status === "waiting_on_customer"
-                    ? "text-sky-700/80 dark:text-sky-400/80"
-                    : "text-muted-foreground",
-              )}
-            >
-              {ticket.status === "resolved"
-                ? "This ticket will automatically close in 72 hours if no further action is taken."
-                : ticket.status === "waiting_on_customer"
-                  ? "We need additional information from you to continue working on this ticket. Reply to this message when you're ready."
-                  : "No further actions can be added to this ticket. If you need further assistance or want to take another action, reopen the ticket."}
-            </p>
+    <ScrollArea className="h-full min-h-0 flex-1 bg-card/20">
+      <div className="space-y-3 p-4">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-2 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <Hash className="size-4 text-primary" />
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
+              Ticket Details
+            </h2>
           </div>
         </div>
-      )}
 
-      {/* Ticket Identity & Status Card */}
-      <div className="rounded-xl border border-border/70 bg-card/60 p-3.5 space-y-3 shadow-2xs">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-muted-foreground">
-            Ticket ID
-          </span>
-          <button
-            type="button"
-            onClick={copyTicketNumber}
-            className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-muted/80 text-foreground border border-border/60 hover:bg-muted transition-colors cursor-pointer"
-            title="Click to copy ticket number"
+        {alert && (
+          <div
+            className={cn(
+              "flex items-start gap-3 rounded-xl border px-4 py-3",
+              ticket.status === "resolved"
+                ? "border-amber-500/20 bg-amber-500/5 text-amber-700 dark:border-amber-500/15 dark:bg-amber-500/10 dark:text-amber-400"
+                : ticket.status === "waiting_on_customer"
+                  ? "border-sky-500/20 bg-sky-500/5 text-sky-700 dark:border-sky-500/15 dark:bg-sky-500/10 dark:text-sky-400"
+                  : "border-border bg-muted/50 text-muted-foreground",
+            )}
           >
-            #{ticket.ticketNumber}
-            {copied ? (
-              <Check className="size-3 text-emerald-500" />
+            {ticket.status === "resolved" ? (
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            ) : ticket.status === "waiting_on_customer" ? (
+              <Clock className="mt-0.5 size-4 shrink-0" />
             ) : (
-              <Copy className="size-3 text-muted-foreground" />
+              <Lock className="mt-0.5 size-4 shrink-0" />
             )}
-          </button>
+
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">
+                {ticket.status === "resolved"
+                  ? "Ticket resolved"
+                  : ticket.status === "waiting_on_customer"
+                    ? "Waiting for your response"
+                    : "Ticket closed"}
+              </p>
+
+              <p
+                className={cn(
+                  "text-xs leading-relaxed",
+                  ticket.status === "resolved"
+                    ? "text-amber-700/80 dark:text-amber-400/80"
+                    : ticket.status === "waiting_on_customer"
+                      ? "text-sky-700/80 dark:text-sky-400/80"
+                      : "text-muted-foreground",
+                )}
+              >
+                {ticket.status === "resolved"
+                  ? "This ticket will automatically close in 72 hours if no further action is taken."
+                  : ticket.status === "waiting_on_customer"
+                    ? "We need additional information from you to continue working on this ticket. Reply to this message when you're ready."
+                    : "No further actions can be added to this ticket. If you need further assistance or want to take another action, reopen the ticket."}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Ticket Identity & Status Card */}
+        <div className="rounded-xl border border-border/70 bg-card/60 p-3.5 space-y-3 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">
+              Ticket ID
+            </span>
+            <button
+              type="button"
+              onClick={copyTicketNumber}
+              className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-muted/80 text-foreground border border-border/60 hover:bg-muted transition-colors cursor-pointer"
+              title="Click to copy ticket number"
+            >
+              #{ticket.ticketNumber}
+              {copied ? (
+                <Check className="size-3 text-emerald-500" />
+              ) : (
+                <Copy className="size-3 text-muted-foreground" />
+              )}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-border/40">
+            <span className="text-xs font-medium text-muted-foreground">
+              Status
+            </span>
+            <RenderStatusPill
+              status={ticket.status}
+              className="text-xs py-0 h-5"
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-border/40">
+            <span className="text-xs font-medium text-muted-foreground">
+              Priority
+            </span>
+            <RenderPriorityBadge priority={ticket.priority} />
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-border/40">
+            <span className="text-xs font-medium text-muted-foreground">
+              Category
+            </span>
+            <RenderCategoryBadge category={ticket.category} />
+          </div>
         </div>
+        <div className="rounded-xl border border-border/70 bg-card/60 p-3.5 space-y-3 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">
+              Ticket ID
+            </span>
+            <button
+              type="button"
+              onClick={copyTicketNumber}
+              className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-muted/80 text-foreground border border-border/60 hover:bg-muted transition-colors cursor-pointer"
+              title="Click to copy ticket number"
+            >
+              #{ticket.ticketNumber}
+              {copied ? (
+                <Check className="size-3 text-emerald-500" />
+              ) : (
+                <Copy className="size-3 text-muted-foreground" />
+              )}
+            </button>
+          </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-border/40">
-          <span className="text-xs font-medium text-muted-foreground">
-            Status
-          </span>
-          <RenderStatusPill
-            status={ticket.status}
-            className="text-xs py-0 h-5"
-          />
-        </div>
+          <div className="flex items-center justify-between pt-2 border-t border-border/40">
+            <span className="text-xs font-medium text-muted-foreground">
+              Status
+            </span>
+            <RenderStatusPill
+              status={ticket.status}
+              className="text-xs py-0 h-5"
+            />
+          </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-border/40">
-          <span className="text-xs font-medium text-muted-foreground">
-            Priority
-          </span>
-          <RenderPriorityBadge priority={ticket.priority} />
-        </div>
+          <div className="flex items-center justify-between pt-2 border-t border-border/40">
+            <span className="text-xs font-medium text-muted-foreground">
+              Priority
+            </span>
+            <RenderPriorityBadge priority={ticket.priority} />
+          </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-border/40">
-          <span className="text-xs font-medium text-muted-foreground">
-            Category
-          </span>
-          <RenderCategoryBadge category={ticket.category} />
-        </div>
-      </div>
-
-      {/* Assignment & Provider Card */}
-      <div className="rounded-xl border border-border/70 bg-card/60 p-3.5 space-y-3 shadow-2xs">
-        <span className="text-xs font-medium text-muted-foreground block">
-          Support Contact
-        </span>
-
-        <div className="flex items-center gap-2.5">
-          <Avatar className="size-8 shrink-0">
-            {ticket.assignee?.image && (
-              <AvatarImage
-                src={ticket.assignee.image}
-                alt={ticket.assignee.name}
-              />
-            )}
-            <AvatarFallback className="text-xs bg-primary/10 text-primary">
-              {ticket.assignee ? initials(ticket.assignee.name) : "?"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-foreground truncate">
-              {ticket.assignee?.name ?? "Support Agent"}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              {ticket.assignee ? "Assigned Specialist" : "Awaiting assignment"}
-            </p>
+          <div className="flex items-center justify-between pt-2 border-t border-border/40">
+            <span className="text-xs font-medium text-muted-foreground">
+              Category
+            </span>
+            <RenderCategoryBadge category={ticket.category} />
           </div>
         </div>
 
-        {ticket.provider && (
-          <div className="flex items-center gap-2.5 pt-2 border-t border-border/40">
-            <div className="size-8 rounded-full bg-secondary/80 flex items-center justify-center shrink-0 text-muted-foreground">
-              <Building2 className="size-4 text-indigo-500" />
-            </div>
+        {/* Assignment & Provider Card */}
+        <div className="rounded-xl border border-border/70 bg-card/60 p-3.5 space-y-3 shadow-2xs">
+          <span className="text-xs font-medium text-muted-foreground block">
+            Support Contact
+          </span>
+
+          <div className="flex items-center gap-2.5">
+            <Avatar className="size-8 shrink-0">
+              {ticket.assignee?.image && (
+                <AvatarImage
+                  src={ticket.assignee.image}
+                  alt={ticket.assignee.name}
+                />
+              )}
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                {ticket.assignee ? initials(ticket.assignee.name) : "?"}
+              </AvatarFallback>
+            </Avatar>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-foreground truncate">
-                {ticket.provider.name}
+                {ticket.assignee?.name ?? "Support Agent"}
               </p>
               <p className="text-[11px] text-muted-foreground">
-                Service Provider
+                {ticket.assignee
+                  ? "Assigned Specialist"
+                  : "Awaiting assignment"}
               </p>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Activity Timeline Card */}
-      <div className="rounded-xl border border-border/70 bg-card/60 p-3.5 space-y-2.5 shadow-2xs">
-        <span className="text-xs font-medium text-muted-foreground block">
-          Activity
-        </span>
-
-        <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
-            <CalendarDays className="size-3.5" /> Opened
-          </span>
-          <span className="font-medium text-foreground">
-            {formatTicketDate(ticket.createdAt)}
-          </span>
+          {ticket.provider && (
+            <div className="flex items-center gap-2.5 pt-2 border-t border-border/40">
+              <div className="size-8 rounded-full bg-secondary/80 flex items-center justify-center shrink-0 text-muted-foreground">
+                <Building2 className="size-4 text-indigo-500" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-foreground truncate">
+                  {ticket.provider.name}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Service Provider
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
-            <Clock3 className="size-3.5 text-amber-500" /> Last message
+        {/* Activity Timeline Card */}
+        <div className="rounded-xl border border-border/70 bg-card/60 p-3.5 space-y-2.5 shadow-2xs">
+          <span className="text-xs font-medium text-muted-foreground block">
+            Activity
           </span>
-          <span className="font-medium text-foreground">
-            {formatTicketDate(ticket.lastMessageAt)}
-          </span>
-        </div>
 
-        <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
-            <MessageSquare className="size-3.5 text-blue-500" /> Messages
-          </span>
-          <span className="font-medium text-foreground">
-            {ticket.messageCount ?? 0}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
-            <UserCheck className="size-3.5 text-emerald-500" /> Staff replied
-          </span>
-          <span
-            className={cn(
-              "font-medium",
-              ticket.hasStaffReply
-                ? "text-emerald-600 dark:text-emerald-400"
-                : "text-muted-foreground",
-            )}
-          >
-            {ticket.hasStaffReply ? "Yes" : "Not yet"}
-          </span>
-        </div>
-
-        {ticket.closedAt && (
-          <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
+          <div className="flex items-center justify-between text-xs">
             <span className="flex items-center gap-1.5 text-muted-foreground">
-              <CircleCheck className="size-3.5 text-rose-500" /> Closed
+              <CalendarDays className="size-3.5" /> Opened
             </span>
             <span className="font-medium text-foreground">
-              {formatTicketDate(ticket.closedAt)}
+              {formatTicketDate(ticket.createdAt)}
             </span>
           </div>
-        )}
+
+          <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock3 className="size-3.5 text-amber-500" /> Last message
+            </span>
+            <span className="font-medium text-foreground">
+              {formatTicketDate(ticket.lastMessageAt)}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <MessageSquare className="size-3.5 text-blue-500" /> Messages
+            </span>
+            <span className="font-medium text-foreground">
+              {ticket.messageCount ?? 0}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <UserCheck className="size-3.5 text-emerald-500" /> Staff replied
+            </span>
+            <span
+              className={cn(
+                "font-medium",
+                ticket.hasStaffReply
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-muted-foreground",
+              )}
+            >
+              {ticket.hasStaffReply ? "Yes" : "Not yet"}
+            </span>
+          </div>
+
+          {ticket.closedAt && (
+            <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <CircleCheck className="size-3.5 text-rose-500" /> Closed
+              </span>
+              <span className="font-medium text-foreground">
+                {formatTicketDate(ticket.closedAt)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <Alert variant="default" className="border-amber-500/30 bg-amber-500/5">
+          <AlertTriangle className="size-4 text-amber-500" />
+
+          <AlertTitle>Message history mismatch</AlertTitle>
+
+          <AlertDescription className="text-muted-foreground">
+            The last message timestamp doesn't match the recorded timestamp.
+            This may indicate that a message has been deleted from this
+            conversation.
+          </AlertDescription>
+        </Alert>
       </div>
-    </div>
+    </ScrollArea>
   );
 }
 
