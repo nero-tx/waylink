@@ -1,7 +1,10 @@
 import { redisClient } from "@/lib/redis";
+import { createQueryCacheKey } from "./create-query-key";
 
 const DEFAULT_TTL_SECONDS = 60;
 const CACHE_TIMEOUT_MS = 500;
+const versionKey = (ns: string) => `cache-version:${ns}`;
+type QueryInput = URLSearchParams | string | Record<string, unknown>;
 
 // Stops a hanging Redis call from blocking the request
 function withTimeout<T>(
@@ -103,4 +106,22 @@ export function generateKey(...args: string[]): string {
       return encodeURIComponent(part);
     })
     .join(SEPARATOR);
+}
+
+export async function buildCacheKey(ns: string, input: QueryInput) {
+  const version = (await getCache(versionKey(ns))) ?? "0";
+  return generateKey(ns, `v${version}`, createQueryCacheKey(input));
+}
+
+// Invalidate the whole namespace
+export async function invalidateNamespace(ns: string) {
+  const key = versionKey(ns);
+  try {
+    const redis = await withTimeout(redisClient());
+    await withTimeout(redis.incr(key));
+    return true;
+  } catch (err) {
+    logCacheError("invalidate namespace", key, err);
+    return false;
+  }
 }

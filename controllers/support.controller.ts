@@ -1,6 +1,6 @@
 import { SupportTicketConversation } from "@/lib/all-types";
 import { getAuthSession } from "@/lib/auth-server";
-import { generateKey, getCache, setCache } from "@/lib/cache";
+import { buildCacheKey, generateKey, getCache, setCache } from "@/lib/cache";
 import { getCurrentProvider } from "@/lib/provider-auth";
 import { listTicketService, ticketIssues } from "@/services/support.service";
 
@@ -65,7 +65,14 @@ export function listTicketsController(
   role: "user" | "provider" = "user",
 ) {
   return withActor(role, async (actor) => {
-    return await listTicketService(params, actor);
+    const key = await buildCacheKey("ticket", params);
+
+    const cache = await getCache(key);
+    if (cache) return cache;
+
+    const data = await listTicketService(params, actor);
+    if (data) await setCache(key, data, CACHEAVGTTL);
+    return data;
   });
 }
 
