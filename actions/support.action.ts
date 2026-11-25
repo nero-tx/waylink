@@ -17,7 +17,12 @@ import { getAuthSession } from "@/lib/auth-server";
 import { customAlphabet } from "nanoid";
 import { randomInt } from "node:crypto";
 import { getTicketIssuesController } from "@/controllers/support.controller";
-import { delCache, generateKey, invalidateCache } from "@/lib/cache";
+import {
+  delCache,
+  generateKey,
+  invalidateCache,
+  invalidateNamespace,
+} from "@/lib/cache";
 
 type SupportRole = "user" | "provider";
 type ActionError = {
@@ -200,13 +205,13 @@ async function findOwnedTicket(id: string, actor: Actor) {
 export async function createSupportTicket(
   role: SupportRole,
   input: SupportTicketFormValues,
-): Promise<ActionResult<SupportTicket>> {
+): Promise<ActionResponse<SupportTicket>> {
   const auth = await resolveActor(role);
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return reject("Not authorized.");
   const { actor } = auth;
 
   const checked = validate(actor, input);
-  if ("error" in checked) return checked.error;
+  if ("error" in checked) return reject(checked.error.message);
   const { values } = checked;
 
   try {
@@ -233,12 +238,13 @@ export async function createSupportTicket(
 
       return created;
     });
-
     // cache: revalidate here once caching lands
-    return { state: "success", message: "Ticket created.", data: ticket };
+    if (ticket) await invalidateNamespace(`ticket:${actor.userId}`);
+
+    return success("Ticket created.", ticket);
   } catch (error) {
     console.error("[support] createSupportTicket", error);
-    return fail("Couldn't create the ticket. Try again.");
+    return reject("Couldn't create the ticket. Try again.");
   }
 }
 
@@ -246,22 +252,22 @@ export async function updateSupportTicket(
   role: SupportRole,
   id: string,
   input: SupportTicketFormValues,
-): Promise<ActionResult> {
+): Promise<ActionResponse> {
   const auth = await resolveActor(role);
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return reject("Not authorized.");
   const { actor } = auth;
 
-  if (!UUID.test(id)) return fail("Ticket not found.");
+  if (!UUID.test(id)) return reject("Ticket not found.");
 
   const checked = validate(actor, input);
-  if ("error" in checked) return checked.error;
+  if ("error" in checked) return reject(checked.error.message);
   const { values } = checked;
 
   try {
     const ticket = await findOwnedTicket(id, actor);
-    if (!ticket) return fail("Ticket not found.");
+    if (!ticket) return reject("Ticket not found.");
     if (!MUTABLE_STATUSES.includes(ticket.status)) {
-      return fail("This ticket can no longer be edited.");
+      return reject("This ticket can no longer be edited.");
     }
 
     await db.transaction(async (tx) => {
@@ -284,51 +290,54 @@ export async function updateSupportTicket(
           .limit(1),
       ]);
 
-      if (first) {
-        await tx
+      if (first)
+        return await tx
           .update(supportMessages)
           .set({ body: values.body })
-          .where(eq(supportMessages.id, first.id));
-      }
+          .where(eq(supportMessages.id, first.id))
+          .returning({ id: supportMessages.id });
     });
 
     // cache: revalidate here once caching lands
-    return { state: "success", message: "Ticket updated." };
+    await invalidateNamespace(`ticket:${actor.userId}`);
+    return success("Ticket updated.");
   } catch (error) {
     console.error("[support] updateSupportTicket", error);
-    return fail("Couldn't update the ticket. Try again.");
+    return reject("Couldn't update the ticket. Try again.");
   }
 }
 
 export async function deleteSupportTicket(
   role: SupportRole,
   id: string,
-): Promise<ActionResult> {
+): Promise<ActionResponse> {
   const auth = await resolveActor(role);
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return reject("Not authorized.");
   const { actor } = auth;
 
-  if (!UUID.test(id)) return fail("Ticket not found.");
+  if (!UUID.test(id)) return reject("Invalid ticket ID.");
 
   try {
     const ticket = await findOwnedTicket(id, actor);
-    if (!ticket) return fail("Ticket not found.");
+    if (!ticket) return reject("Ticket not found.");
     if (!MUTABLE_STATUSES.includes(ticket.status)) {
-      return fail("This ticket can no longer be deleted.");
+      return reject("This ticket can no longer be deleted.");
     }
 
     await db.transaction(async (tx) => {
-      await tx.delete(supportMessages).where(eq(supportMessages.ticketId, id));
+      // await tx.delete(supportMessages).where(eq(supportMessages.ticketId, id));
       await tx
         .delete(supportTickets)
         .where(and(eq(supportTickets.id, id), ownedBy(actor)));
     });
 
     // cache: revalidate here once caching lands
-    return { state: "success", message: "Ticket deleted." };
+    await invalidateNamespace(`ticket:${actor.userId}`);
+    return success("Ticket deleted.");
+    // return { state: "success", message: "Ticket deleted." };
   } catch (error) {
     console.error("[support] deleteSupportTicket", error);
-    return fail("Couldn't delete the ticket. Try again.");
+    return reject("Couldn't delete the ticket. Try again.");
   }
 }
 

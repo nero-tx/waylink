@@ -65,13 +65,13 @@ export function listTicketsController(
   role: "user" | "provider" = "user",
 ) {
   return withActor(role, async (actor) => {
-    const key = await buildCacheKey("ticket", params);
+    const key = await buildCacheKey(`ticket:${actor.userId}`, params);
 
     const cache = await getCache(key);
     if (cache) return cache;
 
     const data = await listTicketService(params, actor);
-    if (data) await setCache(key, data, CACHEAVGTTL);
+    if (data) await setCache(key, data, 1000);
     return data;
   });
 }

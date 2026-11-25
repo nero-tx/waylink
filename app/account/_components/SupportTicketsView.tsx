@@ -29,6 +29,7 @@ import {
 } from "./SupportElements";
 import type { SupportTicketFormValues } from "@/validations/support";
 import { createSupportTicket } from "@/actions/support.action";
+import { useSupportStore } from "@/stores/support.store";
 
 const CreateTicketDialog = dynamic(
   () => import("./CreateTicketDialog").then((m) => m.CreateTicketDialog),
@@ -66,7 +67,6 @@ const URL_OPTIONS: UseUrlOptions<SupportFiltersState> = {
   },
 };
 
-const EMPTY_TICKETS: SupportTicketsResponse["data"]["tickets"] = [];
 const EMPTY_PAGINATION: Pagination = {
   limit: LIMIT,
   offset: 0,
@@ -82,6 +82,8 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMounted, setDialogMounted] = useState(false);
+  const { tickets, setTicket, counts, setCounts, updateCounts } =
+    useSupportStore();
 
   const { urlParams, setUrlParams, resetUrl, hasActiveParams, isPending } =
     useUrl<SupportFiltersState>(DEFAULT_FILTERS, URL_OPTIONS);
@@ -106,10 +108,16 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
   const { data, error, isLoading, isFetching, refetch } =
     useFetch<SupportTicketsResponse>(apiUrl);
 
-  const tickets = data?.data.tickets ?? EMPTY_TICKETS;
-  const pagination = data?.data.pagination ?? EMPTY_PAGINATION;
-  const counts = data?.data.counts;
+  useEffect(() => {
+    if (!data?.data) return;
 
+    setTicket(data.data.tickets);
+    setCounts(data.data.counts);
+  }, [data?.data.tickets, setTicket]);
+
+  const pagination = data?.data.pagination ?? EMPTY_PAGINATION;
+
+  //  const counts = data?.data.counts;
   const isRefreshing = !isLoading && (isFetching || isPending);
   const isBusy = isLoading || isRefreshing;
 
@@ -142,12 +150,11 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
   const handleCreate = useCallback(
     async (values: SupportTicketFormValues) => {
       const result = await createSupportTicket(role, values);
-      if (result.state === "error") throw new Error(result.message);
+      if (!result.success || !result.data) throw new Error(result.message);
 
-      // The new ticket may not match the active filters, and total/counts
-      // change, so refetch from page 1 instead of patching the cache
-      if (page !== 1) setPageState({ key: filterKey, page: 1 });
-      else refetch();
+      const ticket = result.data;
+      setTicket(ticket);
+      updateCounts(ticket.status, "add");
     },
     [role, page, filterKey, refetch],
   );
