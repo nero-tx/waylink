@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, useTransition } from "react";
 import {
   CircleCheck,
   RotateCcw,
@@ -17,6 +17,7 @@ import {
   UserCheck,
   AlertCircle,
   Clock,
+  Loader2,
 } from "lucide-react";
 import { useSupportStore } from "@/stores/support.store";
 import type { SupportTicketConversation } from "@/lib/all-types";
@@ -349,7 +350,7 @@ type ComposerProps = {
   disabled?: boolean;
   canWriteInternal?: boolean;
   onReopen?: () => void;
-  onSend: (body: string, isInternal: boolean) => void;
+  onSend: (body: string, isInternal: boolean) => Promise<boolean>;
 };
 
 export function MessageComposer({
@@ -358,6 +359,7 @@ export function MessageComposer({
   onReopen,
   onSend,
 }: ComposerProps) {
+  const [isPending, startTransition] = useTransition();
   const [body, setBody] = useState("");
   const [internal, setInternal] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -402,13 +404,20 @@ export function MessageComposer({
     );
   }
 
-  const canSend = body.trim().length > 0 && body.length <= MAX_LENGTH;
+  const canSend =
+    body.trim().length > 0 && body.length <= MAX_LENGTH && !isPending;
 
-  const send = () => {
-    if (!canSend) return;
-    onSend(body.trim(), canWriteInternal ? internal : false);
-    setBody("");
-    ref.current?.focus();
+  const send = async () => {
+    if (!canSend || isPending) return;
+    const content = body.trim();
+
+    startTransition(async () => {
+      const sent = await onSend(content, canWriteInternal ? internal : false);
+      if (!sent) return;
+
+      setBody("");
+      ref.current?.focus();
+    });
   };
 
   return (
@@ -507,7 +516,7 @@ export function MessageComposer({
                 type="button"
                 size="icon"
                 onClick={send}
-                disabled={!canSend}
+                disabled={!canSend || isPending}
                 aria-label={internal ? "Add internal note" : "Send message"}
                 className={cn(
                   "size-9 rounded-full shadow-sm transition-all duration-150",
@@ -521,7 +530,11 @@ export function MessageComposer({
                   !canSend && "cursor-not-allowed opacity-40",
                 )}
               >
-                <ArrowUp className="size-4" strokeWidth={2.5} />
+                {isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <ArrowUp className="size-4" strokeWidth={2.5} />
+                )}
               </Button>
             </div>
           </div>

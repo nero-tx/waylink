@@ -17,6 +17,7 @@ import { getAuthSession } from "@/lib/auth-server";
 import { customAlphabet } from "nanoid";
 import { randomInt } from "node:crypto";
 import { getTicketIssuesController } from "@/controllers/support.controller";
+import { delCache, generateKey, invalidateCache } from "@/lib/cache";
 
 type SupportRole = "user" | "provider";
 type ActionError = {
@@ -31,12 +32,36 @@ type ActionSuccess<T = undefined> = {
 };
 type ActionResult<T = undefined> = ActionSuccess<T> | ActionError;
 
+type ActionResponse<T = null> = {
+  success: boolean;
+  message: string;
+  data: T | null;
+};
+
+const success = <T>(
+  message: string,
+  data: T | null = null,
+): ActionResponse<T> => ({
+  success: true,
+  message,
+  data,
+});
+
+const reject = <T>(
+  message: string,
+  data: T | null = null,
+): ActionResponse<T> => ({
+  success: false,
+  message,
+  data: null,
+});
+
 /**
  * Who is calling. `userId` is always set because support_tickets.user_id is
  * NOT NULL; a provider acts through its owner user.
  */
 type Actor =
-  | { role: "user"; userId: string }
+  | { role: "user" | "admin"; userId: string }
   | { role: "provider"; userId: string; providerId: string };
 
 // Rules
@@ -124,7 +149,11 @@ function validate(
     };
   }
 
-  if (!ROLE_CATEGORIES[actor.role].includes(parsed.data.category)) {
+  if (
+    !ROLE_CATEGORIES[actor.role === "admin" ? "user" : actor.role].includes(
+      parsed.data.category,
+    )
+  ) {
     return {
       error: fail("This category isn't available for your account.", {
         category: "Select a different category.",
@@ -331,3 +360,174 @@ export async function listTicketIssue(ticketId: string) {
     };
   }
 }
+
+export const deleteMessageAction = async (
+  messageId: string,
+  ticketId: string,
+) => {
+  const auth = await resolveActor("user");
+  if ("error" in auth) return reject("Not Authorized.");
+  const { actor } = auth;
+
+  if (!messageId || !ticketId)
+    return reject("Message ID or Ticket ID is Required.");
+
+  try {
+    const ticket = await findOwnedTicket(ticketId, actor);
+    const key = generateKey("ticket", "issue", ticketId);
+
+    if (!ticket) return reject("Ticket not found.");
+
+    if (ticket.status === "closed")
+      return reject("Message can't be deleted in closed ticket.");
+
+    await db
+      .delete(supportMessages)
+      .where(
+        and(
+          eq(supportMessages.id, messageId),
+          eq(supportMessages.ticketId, ticketId),
+          eq(supportMessages.authorId, actor.userId),
+        ),
+      );
+
+    await delCache(key);
+
+    return success("Message deleted successfully.");
+  } catch (error) {
+    console.error("deleteMessage error:", error);
+
+    return reject(
+      error instanceof Error ? error.message : "Failed to delete message.",
+    );
+  }
+};
+
+export const addMessageAction = async (
+  ticketId: string,
+  content: string,
+  internal = false,
+): Promise<ActionResponse<{ id: string }>> => {
+  const auth = await resolveActor("user");
+  if ("error" in auth) return reject("Not Authorized.");
+  const { actor } = auth;
+
+  if (!ticketId || !content?.trim())
+    return reject("Ticket ID and message content are required.");
+
+  try {
+    const ticket = await findOwnedTicket(ticketId, actor);
+    if (!ticket) return reject("Ticket not found.");
+
+    if (ticket.status === "closed")
+      return reject("Can't send messages in a closed ticket.");
+
+    const isStaff = actor.role === "admin";
+
+    // Customers cannot create internal messages.
+    if (internal && !isStaff)
+      return reject("Not Authorized to send internal messages.");
+
+    const key = generateKey("ticket", "issue", ticketId);
+
+    const message = await db.transaction(async (tx) => {
+      const [insertedMessage] = await tx
+        .insert(supportMessages)
+        .values({
+          ticketId,
+          authorId: actor.userId,
+          body: content.trim(),
+          isInternal: internal,
+          isStaff,
+        })
+        .returning({ id: supportMessages.id });
+
+      await tx
+        .update(supportTickets)
+        .set({ lastMessageAt: new Date() })
+        .where(eq(supportTickets.id, ticketId));
+
+      return insertedMessage;
+    });
+
+    if (!message) return reject("Failed to create message.");
+    await delCache(key);
+
+    return success("Message sent successfully.", message);
+  } catch (error) {
+    console.error("addMessage error:", error);
+
+    return reject(
+      error instanceof Error ? error.message : "Failed to send message.",
+    );
+  }
+};
+
+export const editMessageAction = async (
+  messageId: string,
+  ticketId: string,
+  content: string,
+) => {
+  const auth = await resolveActor("user");
+  if ("error" in auth) return reject("Not Authorized.");
+  const { actor } = auth;
+
+  const body = content?.trim();
+  if (!messageId || !ticketId || !body)
+    return reject("Message ID, Ticket ID and content are required.");
+
+  try {
+    const ticket = await findOwnedTicket(ticketId, actor);
+    if (!ticket) return reject("Ticket not found.");
+    if (ticket.status === "closed")
+      return reject("Messages can't be edited in a closed ticket.");
+
+    const [existingMessage] = await db
+      .select({
+        authorId: supportMessages.authorId,
+        isInternal: supportMessages.isInternal,
+        body: supportMessages.body,
+      })
+      .from(supportMessages)
+      .where(
+        and(
+          eq(supportMessages.id, messageId),
+          eq(supportMessages.ticketId, ticketId),
+        ),
+      )
+      .limit(1);
+
+    if (!existingMessage) return reject("Message not found.");
+    if (existingMessage.authorId !== actor.userId)
+      return reject("You can only edit your own messages.");
+    if (existingMessage.isInternal) return reject("Not Authorized.");
+
+    if (existingMessage.body === body) return success("No changes.");
+
+    const [updated] = await db
+      .update(supportMessages)
+      .set({ body, updatedAt: new Date() })
+      .where(
+        and(
+          eq(supportMessages.id, messageId),
+          eq(supportMessages.ticketId, ticketId),
+          eq(supportMessages.authorId, actor.userId),
+        ),
+      )
+      .returning({ id: supportMessages.id });
+
+    if (!updated) return reject("Failed to update message.");
+
+    // The DB write already succeeded, so a cache failure must not report failure
+    try {
+      await delCache(generateKey("ticket", "issue", ticketId));
+    } catch (cacheError) {
+      console.error("editMessage cache invalidation failed:", cacheError);
+    }
+
+    return success("Message updated.");
+  } catch (error) {
+    console.error("editMessage error:", error);
+    return reject("Failed to edit message.");
+  }
+};

@@ -15,6 +15,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuthStore } from "@/stores/auth.store";
 import { Button } from "@/components/ui/button";
 import { AuthLink } from "@/app/(auth)/_components/AuthLink";
+import {
+  addMessageAction,
+  deleteMessageAction,
+  editMessageAction,
+} from "@/actions/support.action";
+import { toast } from "sonner";
 
 const getViwer = (): SupportViewer | null => {
   const user = useAuthStore((s) => s.user);
@@ -76,6 +82,80 @@ export function SupportConversationView({
     ? messages
     : messages.filter((m) => !m.isInternal);
 
+  const createMessage = async (
+    content: string,
+    internal?: boolean,
+  ): Promise<boolean> => {
+    try {
+      const res = await addMessageAction(ticketId, content, internal);
+      if (!res.success || !res.data) {
+        toast.error(res.message);
+        return false;
+      }
+
+      addMessage(
+        ticketId,
+        {
+          body: content,
+          isInternal: internal ?? false,
+          isStaff: viewer.isStaff,
+          author: {
+            id: viewer.id,
+            name: viewer.name,
+            image: viewer.image ?? undefined,
+          },
+        },
+        res.data.id,
+      );
+
+      return true;
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send message.",
+      );
+
+      return false;
+    }
+  };
+
+  const delMessage = async (messageId: string) => {
+    try {
+      const res = await deleteMessageAction(messageId, ticketId);
+      if (!res.success) {
+        toast.error(res.message);
+        return false;
+      }
+
+      deleteMessage(ticketId, messageId);
+      return true;
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send message.",
+      );
+
+      return false;
+    }
+  };
+
+  const editMess = async (messageId: string, body: string) => {
+    try {
+      const res = await editMessageAction(messageId, ticketId, body);
+      if (!res.success) {
+        toast.error(res.message);
+        return false;
+      }
+
+      editMessage(ticketId, messageId, body);
+      return true;
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send message.",
+      );
+
+      return false;
+    }
+  };
+
   return (
     <div className="flex h-full w-full flex-col min-h-0 overflow-hidden bg-background">
       <TicketTopBar
@@ -114,8 +194,8 @@ export function SupportConversationView({
                   message={message}
                   isOwn={message.authorId === viewer.id}
                   readOnly={isClosed}
-                  onEdit={(id, body) => editMessage(ticketId, id, body)}
-                  onDelete={(id) => deleteMessage(ticketId, id)}
+                  onEdit={editMess}
+                  onDelete={delMessage}
                 />
               ))}
               <div ref={endRef} />
@@ -126,18 +206,7 @@ export function SupportConversationView({
             disabled={isClosed}
             canWriteInternal={viewer.isStaff}
             onReopen={() => reopenTicket(ticketId)}
-            onSend={(body, isInternal) =>
-              addMessage(ticketId, {
-                body,
-                isInternal,
-                isStaff: viewer.isStaff,
-                author: {
-                  id: viewer.id,
-                  name: viewer.name,
-                  image: viewer.image ?? undefined,
-                },
-              })
-            }
+            onSend={createMessage}
           />
         </section>
 

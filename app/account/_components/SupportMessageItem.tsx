@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Copy, Lock, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  Copy,
+  Loader2,
+  Lock,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { cn, formatTicketDate } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -31,8 +38,8 @@ type Props = {
   message: SupportMessage;
   isOwn: boolean;
   readOnly?: boolean;
-  onEdit: (messageId: string, body: string) => void;
-  onDelete: (messageId: string) => void;
+  onEdit: (messageId: string, body: string) => Promise<boolean>;
+  onDelete: (messageId: string) => Promise<boolean>;
 };
 
 export function SupportMessageItem({
@@ -42,6 +49,7 @@ export function SupportMessageItem({
   onEdit,
   onDelete,
 }: Props) {
+  const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(message.body);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -66,8 +74,19 @@ export function SupportMessageItem({
 
   const saveEdit = () => {
     const next = draft.trim();
-    if (next && next !== message.body) onEdit(message.id, next);
-    setIsEditing(false);
+
+    if (!next || next === message.body || isPending) {
+      setIsEditing(false);
+      return;
+    }
+
+    startTransition(async () => {
+      const updated = await onEdit(message.id, next);
+
+      if (updated) {
+        setIsEditing(false);
+      }
+    });
   };
 
   const cancelEdit = () => {
@@ -84,6 +103,18 @@ export function SupportMessageItem({
         description: "Your browser doesn't allow clipboard access.",
       });
     }
+  };
+
+  const deleteMessageHandler = () => {
+    if (isPending) return;
+
+    startTransition(async () => {
+      const deleted = await onDelete(message.id);
+
+      if (deleted) {
+        setConfirmDelete(false);
+      }
+    });
   };
 
   return (
@@ -110,10 +141,17 @@ export function SupportMessageItem({
         )}
       >
         <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground/80">
+          <span
+            className={cn(
+              "font-medium text-sky-500",
+              isOwn ? "text-sky-500" : "text-emerald-500",
+            )}
+          >
             {isOwn ? "You" : message.author.name}
           </span>
-          {message.isStaff && !isOwn && <span>Support</span>}
+          <span className="text-amber-500">
+            {message.isStaff && !isOwn && <span>Support</span>}
+          </span>
           {message.isInternal && (
             <span className="inline-flex items-center gap-1 text-chat-note-fg">
               <Lock className="size-3" /> Internal note
@@ -145,8 +183,21 @@ export function SupportMessageItem({
                 <Button size="sm" variant="ghost" onClick={cancelEdit}>
                   Cancel
                 </Button>
-                <Button size="sm" onClick={saveEdit} disabled={!draft.trim()}>
-                  Save changes
+                <Button
+                  size="sm"
+                  onClick={saveEdit}
+                  disabled={
+                    !draft.trim() || draft.trim() === message.body || isPending
+                  }
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save changes"
+                  )}
                 </Button>
               </div>
             </div>
@@ -154,11 +205,12 @@ export function SupportMessageItem({
             <div
               className={cn(
                 "whitespace-pre-wrap wrap-break-word px-4 py-2.5 text-sm leading-relaxed",
+                "rounded-2xl shadow-xs",
                 message.isInternal
-                  ? "rounded-2xl border border-dashed border-chat-note-border bg-chat-note text-chat-note-fg"
+                  ? "border border-dashed border-chat-note-border bg-chat-note text-chat-note-fg shadow-none"
                   : isOwn
-                    ? "rounded-2xl rounded-ee-sm bg-chat-mine text-chat-mine-fg hover:bg-chat-mine-hover shadow-xs"
-                    : "rounded-2xl rounded-es-sm bg-chat-theirs text-chat-theirs-fg shadow-xs",
+                    ? "rounded-ee-sm bg-blue-700 text-white dark:bg-blue-800"
+                    : "rounded-es-sm bg-chat-theirs text-chat-theirs-fg",
               )}
             >
               {message.body}
@@ -210,10 +262,18 @@ export function SupportMessageItem({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => onDelete(message.id)}
+              onClick={deleteMessageHandler}
+              disabled={isPending}
               variant="destructive"
             >
-              Delete Message
+              {isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Message"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

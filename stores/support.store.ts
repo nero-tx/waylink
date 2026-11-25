@@ -26,6 +26,7 @@ interface SupportState {
   addMessage: (
     ticketId: string,
     input: NewMessageInput,
+    messageId: string,
   ) => SupportMessage | null;
   editMessage: (ticketId: string, messageId: string, body: string) => void;
   deleteMessage: (ticketId: string, messageId: string) => void;
@@ -72,11 +73,11 @@ export const useSupportStore = create<SupportState>()((set, get) => {
         },
       })),
 
-    addMessage: (ticketId, input) => {
+    addMessage: (ticketId, input, messageId) => {
       if (!get().conversations[ticketId]) return null;
       const now = new Date();
       const message: SupportMessage = {
-        id: crypto.randomUUID(), // temp id until the backend returns the real one
+        id: messageId,
         createdAt: now,
         updatedAt: now,
         ticketId,

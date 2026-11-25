@@ -182,7 +182,6 @@ export async function ticketIssues(
     },
   });
 
-  console.log(result)
   if (!result) throw new Error("No Data Found");
 
   const { assignee, messages, provider, ...data } = result;
