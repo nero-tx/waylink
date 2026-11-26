@@ -160,7 +160,7 @@ export async function listTicketService(
 
 export async function ticketIssues(
   ticketId: string,
-): Promise<SupportTicketConversation> {
+): Promise<SupportTicketConversation | null> {
   const result = await db.query.supportTickets.findFirst({
     where: (tickets, { eq }) => eq(tickets.id, ticketId),
     columns: {
@@ -182,7 +182,7 @@ export async function ticketIssues(
     },
   });
 
-  if (!result) throw new Error("No Data Found");
+  if (!result) return null;
 
   const { assignee, messages, provider, ...data } = result;
 

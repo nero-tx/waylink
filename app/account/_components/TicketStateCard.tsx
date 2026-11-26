@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import {
@@ -15,19 +16,29 @@ import { cn } from "@/lib/utils";
 const VARIANTS = {
   "not-found": {
     icon: SearchX,
-    title: "Ticket Not Found",
+    title: "Ticket not found",
     description:
-      "This ticket doesn’t exist, or you don’t have access to it. Check the link or go back to your tickets.",
-    status: "Status: 404",
-    dot: "bg-amber-500",
+      "This ticket doesn’t exist, or you don’t have access to it. Check the link or head back to your tickets.",
+    canRetry: false,
+    tone: {
+      glow: "bg-amber-500",
+      dot: "bg-amber-500",
+      icon: "text-amber-600 dark:text-amber-400",
+      ring: "ring-amber-500/25",
+    },
   },
   error: {
     icon: TriangleAlert,
-    title: "Couldn't Load Ticket Data",
+    title: "Couldn’t load this ticket",
     description:
       "Something went wrong while loading this conversation. Please try again.",
-    status: "Status: Load Failed",
-    dot: "bg-red-500",
+    canRetry: true,
+    tone: {
+      glow: "bg-red-500",
+      dot: "bg-red-500",
+      icon: "text-red-600 dark:text-red-400",
+      ring: "ring-red-500/25",
+    },
   },
 } as const;
 
@@ -40,18 +51,24 @@ export function TicketStateCard({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const { icon: Icon, title, description, status, dot } = VARIANTS[variant];
+  const {
+    icon: Icon,
+    title,
+    description,
+    canRetry,
+    tone,
+  } = VARIANTS[variant];
 
-  const isError = variant === "error";
+  const handleRetry = () => startTransition(() => router.refresh());
 
   return (
     <div
-      role="status"
+      role={variant === "error" ? "alert" : "status"}
       className="relative flex h-full w-full items-center justify-center overflow-hidden px-6 py-16"
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 text-border"
+        className="pointer-events-none absolute inset-0 text-border/70"
         style={{
           backgroundImage: "radial-gradient(currentColor 1px, transparent 1px)",
           backgroundSize: "24px 24px",
@@ -65,61 +82,56 @@ export function TicketStateCard({
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none absolute left-1/2 top-1/2 size-96 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-15 blur-3xl",
-          dot,
+          "pointer-events-none absolute left-1/2 top-1/2 size-96 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-10 blur-3xl dark:opacity-15",
+          tone.glow,
         )}
       />
 
-      <div className="relative flex w-full max-w-lg flex-col items-center text-center">
-        <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 backdrop-blur">
-          <span className="relative flex size-2">
-            <span
-              className={cn(
-                "absolute inline-flex size-full rounded-full opacity-60 motion-safe:animate-ping",
-                dot,
-              )}
-            />
-            <span
-              className={cn("relative inline-flex size-2 rounded-full", dot)}
-            />
-          </span>
-          <span className="text-xs tracking-wider text-muted-foreground">
-            {status}
-          </span>
+      <div className="relative flex w-full max-w-lg flex-col items-center text-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500">
+        <div
+          className={cn(
+            "mb-6 flex size-20 items-center justify-center rounded-3xl border border-border bg-card shadow-sm ring-4",
+            tone.ring,
+          )}
+        >
+          <Icon className={cn("size-9", tone.icon)} strokeWidth={1.5} />
         </div>
 
-        <div className="mb-6 flex size-20 items-center justify-center rounded-3xl border border-border bg-card shadow-sm">
-          <Icon className="size-9 text-muted-foreground" strokeWidth={1.5} />
-        </div>
-
-        <h1 className="text-xl font-semibold tracking-tight sm:text-4xl">
+        <h1 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
           {title}
         </h1>
 
-        <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
-          {error ?? description}
+        <p className="mt-3 max-w-md text-pretty text-sm leading-relaxed text-muted-foreground sm:text-base">
+          {description}
         </p>
 
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-          <Button
-            disabled={isPending}
-            onClick={() => startTransition(() => router.refresh())}
+        {error && (
+          <code
+            dir="ltr"
+            className="mt-4 max-w-full truncate rounded-md border border-border bg-muted/40 px-3 py-1.5 font-mono text-xs text-muted-foreground"
+            title={error}
           >
-            {isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <RefreshCw className="size-4" />
-            )}
-            Try again
-          </Button>
+            {error}
+          </code>
+        )}
 
-          <Button
-            variant={isError ? "outline" : "default"}
-            disabled={isPending}
-            onClick={() => router.push("/account/support")}
-          >
-            <ArrowLeft className="size-4" />
-            Back to tickets
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          {canRetry && (
+            <Button onClick={handleRetry} disabled={isPending}>
+              {isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="size-4" />
+              )}
+              {isPending ? "Retrying…" : "Try again"}
+            </Button>
+          )}
+
+          <Button asChild variant={canRetry ? "outline" : "default"}>
+            <Link href="/account/support">
+              <ArrowLeft className="size-4" />
+              Back to tickets
+            </Link>
           </Button>
         </div>
       </div>

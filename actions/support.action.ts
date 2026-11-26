@@ -325,14 +325,19 @@ export async function deleteSupportTicket(
     }
 
     await db.transaction(async (tx) => {
-      // await tx.delete(supportMessages).where(eq(supportMessages.ticketId, id));
+      await tx.delete(supportMessages).where(eq(supportMessages.ticketId, id));
+
       await tx
         .delete(supportTickets)
         .where(and(eq(supportTickets.id, id), ownedBy(actor)));
     });
 
     // cache: revalidate here once caching lands
-    await invalidateNamespace(`ticket:${actor.userId}`);
+    await Promise.all([
+      invalidateNamespace(`ticket:${actor.userId}`),
+      delCache(generateKey("ticket", "issue", id)),
+    ]);
+
     return success("Ticket deleted.");
     // return { state: "success", message: "Ticket deleted." };
   } catch (error) {

@@ -68,9 +68,10 @@ async function ConversationLoader({ id }: { id: string }) {
   const result = await getConversation(id);
 
   if (!result.ok || !result.data) {
+    const isNotFound = result.error?.toLowerCase().includes("not found");
     return (
       <TicketStateCard
-        variant={result.error ? "error" : "not-found"}
+        variant={isNotFound ? "not-found" : "error"}
         error={result.error ?? undefined}
       />
     );

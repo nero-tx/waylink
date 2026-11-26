@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 import {
   StatusTabs,
   SupportFilters,
-  SupportTicketRow,
   SupportTicketsEmpty,
   SupportTicketsError,
   SupportTicketsSkeleton,
@@ -30,6 +29,7 @@ import {
 import type { SupportTicketFormValues } from "@/validations/support";
 import { createSupportTicket } from "@/actions/support.action";
 import { useSupportStore } from "@/stores/support.store";
+import { SupportTicketRow } from "./SupportTicketRow";
 
 const CreateTicketDialog = dynamic(
   () => import("./CreateTicketDialog").then((m) => m.CreateTicketDialog),
@@ -84,6 +84,7 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
   const [dialogMounted, setDialogMounted] = useState(false);
   const { tickets, setTicket, counts, setCounts, updateCounts } =
     useSupportStore();
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   const { urlParams, setUrlParams, resetUrl, hasActiveParams, isPending } =
     useUrl<SupportFiltersState>(DEFAULT_FILTERS, URL_OPTIONS);
@@ -97,11 +98,7 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
 
   const apiUrl = useMemo(
     () =>
-      buildSupportTicketsUrl(
-        urlParams,
-        { offset: (page - 1) * LIMIT, limit: LIMIT },
-        role,
-      ),
+      buildSupportTicketsUrl(urlParams, { offset: page, limit: LIMIT }, role),
     [urlParams, page, role],
   );
 
@@ -185,7 +182,13 @@ export function SupportTicketsView({ role }: { role: SupportRole }) {
       key={listKey}
     >
       {tickets.map((ticket) => (
-        <SupportTicketRow key={ticket.id} ticket={ticket} />
+        <SupportTicketRow
+          key={ticket.id}
+          ticket={ticket}
+          onSelect={setSelectedTicketId}
+          selected={selectedTicketId === ticket.id}
+          role={role}
+        />
       ))}
     </ul>
   );

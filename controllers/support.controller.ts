@@ -79,15 +79,16 @@ export function listTicketsController(
 export async function getTicketIssuesController(
   id: string,
 ): Promise<SupportTicketConversation | null> {
-  return withActor("user", async (_) => {
-    const key = generateKey("ticket", "issue", id);
-    const cache = await getCache<SupportTicketConversation>(key);
+  const session = await getAuthSession();
+  if (!session) throw new Error("Unauthorized");
 
-    if (cache) return cache;
+  const key = generateKey("ticket", "issue", id);
+  const cache = await getCache<SupportTicketConversation>(key);
 
-    const data = await ticketIssues(id);
-    if (data) await setCache(key, data, CACHEAVGTTL);
+  if (cache) return cache;
 
-    return data;
-  });
+  const data = await ticketIssues(id);
+  if (data) await setCache(key, data, CACHEAVGTTL);
+
+  return data;
 }

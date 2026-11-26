@@ -6,9 +6,8 @@ import {
   SupportCategory,
   SupportPriority,
   SupportStatus,
-  SupportTicket,
 } from "@/lib/all-types";
-import { cn, formatTicketDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   CircleDot,
   Clock,
@@ -16,10 +15,7 @@ import {
   UserRound,
   CircleCheck,
   Search,
-  MessageSquare,
-  UserCheck,
   LucideIcon,
-  Hourglass,
   AlertCircle,
   RefreshCw,
   Plus,
@@ -35,7 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Link from "next/link";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
   StatusFilter,
@@ -178,26 +173,6 @@ const PRIORITY_CONFIG: Record<
   },
 };
 
-const STATUS_ICON: Record<
-  SupportStatus,
-  { icon: LucideIcon; className: string }
-> = {
-  open: {
-    icon: CircleDot,
-    className: "text-emerald-600 dark:text-emerald-400",
-  },
-  in_progress: { icon: Clock, className: "text-amber-600 dark:text-amber-400" },
-  waiting_on_customer: {
-    icon: Hourglass,
-    className: "text-sky-600 dark:text-sky-400",
-  },
-  resolved: {
-    icon: CheckCircle2,
-    className: "text-violet-600 dark:text-violet-400",
-  },
-  closed: { icon: CheckCircle2, className: "text-muted-foreground" },
-};
-
 const humanize = (value: string) => value.replace(/_/g, " ");
 
 export const RenderCategoryBadge = ({
@@ -288,64 +263,6 @@ export function FilterSelect<T extends string>({
         ))}
       </SelectContent>
     </Select>
-  );
-}
-
-const Dot = () => <span aria-hidden>•</span>;
-
-export function SupportTicketRow({ ticket }: { ticket: SupportTicket }) {
-  const { icon: StatusIcon, className: iconClass } = STATUS_ICON[ticket.status];
-
-  return (
-    <li>
-      <div className="group block px-4 py-3.5 transition-colors hover:bg-muted/50">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-3">
-            <StatusIcon className={`mt-0.5 size-4 shrink-0 ${iconClass}`} />
-
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Link
-                  href={`/account/support/${ticket.id}?tknumber=${ticket.ticketNumber}`}
-                  className="text-sm font-semibold leading-snug transition-colors duration-200 group-hover:text-green-700 dark:group-hover:text-green-400 group-hover:underline decoration-green-600/50 dark:decoration-green-400/50 underline-offset-4 sm:text-base"
-                >
-                  {ticket.subject}
-                </Link>
-
-                <RenderCategoryBadge category={ticket.category} />
-                <RenderStatusPill status={ticket.status} />
-              </div>
-
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                <span className="font-mono">#{ticket.ticketNumber}</span>
-                <Dot />
-                <span>opened {formatTicketDate(ticket.createdAt)}</span>
-                <Dot />
-                <span>updated {formatTicketDate(ticket.lastMessageAt)}</span>
-                <Dot />
-                <RenderPriorityBadge priority={ticket.priority} />
-                {ticket.hasStaffReply && (
-                  <>
-                    <Dot />
-                    <span className="inline-flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400">
-                      <UserCheck className="size-3" />
-                      Staff replied
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {ticket.messageCount !== undefined && (
-            <div className="shrink-0 items-center gap-1.5 pt-0.5 text-xs text-muted-foreground flex">
-              <MessageSquare className="size-3.5" />
-              <span>{ticket.messageCount}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </li>
   );
 }
 
