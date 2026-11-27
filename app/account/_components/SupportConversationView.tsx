@@ -10,7 +10,7 @@ import {
 } from "./MessageElements";
 import { SupportMessageItem } from "./SupportMessageItem";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Lock, LogIn, MessageSquare, UserPlus } from "lucide-react";
+import { Lock, LogIn, MessageSquare, MessagesSquare, UserPlus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuthStore } from "@/stores/auth.store";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
   editMessageAction,
 } from "@/actions/support.action";
 import { toast } from "sonner";
+import { SupportTicketsSheet } from "./SupportTicketsSheet";
 
 const getViwer = (): SupportViewer | null => {
   const user = useAuthStore((s) => s.user);
@@ -58,6 +59,7 @@ export function SupportConversationView({
 
   const [showDetails, setShowDetails] = useState(true);
   const [showDetailsMobile, setShowDetailsMobile] = useState(false);
+  const [openTicketSheet, setOpenTicketSheet] = useState(false);
 
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -165,6 +167,7 @@ export function SupportConversationView({
           setShowDetails((prev) => !prev);
           setShowDetailsMobile((prev) => !prev);
         }}
+        setShowTickets={setOpenTicketSheet}
       />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -230,6 +233,12 @@ export function SupportConversationView({
           <TicketDetailsPanel ticket={ticket} />
         </SheetContent>
       </Sheet>
+
+      <SupportTicketsSheet
+        selectedTicketId={ticket.id}
+        open={openTicketSheet}
+        onOpenChange={setOpenTicketSheet}
+      />
     </div>
   );
 }

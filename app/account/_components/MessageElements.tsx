@@ -19,6 +19,7 @@ import {
   Clock,
   Loader2,
   AlertTriangle,
+  List,
 } from "lucide-react";
 import { useSupportStore } from "@/stores/support.store";
 import type { SupportTicketConversation } from "@/lib/all-types";
@@ -44,12 +45,14 @@ type TicketTopBarProps = {
   ticket: Ticket;
   showDetails?: boolean;
   onToggleDetails?: () => void;
+  setShowTickets: (v: boolean) => void;
 };
 
 export function TicketTopBar({
   ticket,
   showDetails,
   onToggleDetails,
+  setShowTickets,
 }: TicketTopBarProps) {
   const closeTicket = useSupportStore((s) => s.closeTicket);
   const reopenTicket = useSupportStore((s) => s.reopenTicket);
@@ -83,7 +86,7 @@ export function TicketTopBar({
           {isClosed ? (
             <Button
               variant="outline"
-              className="gap-1.5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 text-xs h-8 cursor-pointer"
+              className="gap-1.5 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 text-xs cursor-pointer"
               onClick={() => reopenTicket(ticket.id)}
             >
               <RotateCcw className="size-3.5" />
@@ -92,7 +95,7 @@ export function TicketTopBar({
           ) : (
             <Button
               variant="outline"
-              className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive text-xs h-8 cursor-pointer"
+              className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive text-xs cursor-pointer"
               onClick={() => closeTicket(ticket.id)}
             >
               <CircleCheck className="size-3.5" />
@@ -105,7 +108,7 @@ export function TicketTopBar({
               variant={showDetails ? "secondary" : "outline"}
               onClick={onToggleDetails}
               className={cn(
-                "gap-1.5 text-xs h-8 cursor-pointer transition-all lg:hidden",
+                "gap-1.5 text-xs cursor-pointer transition-all lg:hidden",
                 showDetails && "bg-accent text-accent-foreground shadow-2xs",
               )}
               title="Toggle ticket details panel"
@@ -114,6 +117,15 @@ export function TicketTopBar({
               <span className="hidden md:inline">Details</span>
             </Button>
           )}
+
+          <Button
+            onClick={() => setShowTickets(true)}
+            className="gap-1.5 text-xs cursor-pointer transition-all"
+            title="Toggle ticket details panel"
+          >
+            <List className="size-3.5" />
+            <span className="hidden md:inline">Tickets</span>
+          </Button>
         </div>
       </div>
     </div>
@@ -634,62 +646,155 @@ function ModeButton({
   );
 }
 
-const Bubble = ({ mine }: { mine?: boolean }) => (
+const Bubble = ({
+  mine,
+  lines,
+}: {
+  mine?: boolean;
+  lines: string[]; // tailwind width classes, one per line
+}) => (
   <div
-    className={`flex items-end gap-3 ${mine ? "justify-end" : "justify-start"}`}
+    className={cn(
+      "flex items-end gap-3",
+      mine ? "justify-end" : "justify-start",
+    )}
   >
     {!mine && <Skeleton className="size-8 shrink-0 rounded-full" />}
 
     <div
-      className={`flex max-w-[75%] flex-col gap-2 rounded-2xl p-4 ${
-        mine ? "rounded-br-md bg-primary/5" : "rounded-bl-md bg-muted/50"
-      }`}
+      className={cn(
+        "flex max-w-[75%] flex-col gap-2 rounded-2xl p-4",
+        mine ? "rounded-br-md bg-primary/5" : "rounded-bl-md bg-muted/50",
+      )}
     >
-      <Skeleton className={`h-3 ${mine ? "w-40" : "w-56"}`} />
-      <Skeleton className={`h-3 ${mine ? "w-28" : "w-44"}`} />
-      {!mine && <Skeleton className="h-3 w-20" />}
+      {lines.map((w, i) => (
+        <Skeleton key={i} className={cn("h-3 max-w-full", w)} />
+      ))}
     </div>
 
     {mine && <Skeleton className="size-8 shrink-0 rounded-full" />}
   </div>
 );
 
+const Row = ({
+  labelW = "w-14",
+  valueW = "w-16",
+  pill,
+}: {
+  labelW?: string;
+  valueW?: string;
+  pill?: boolean;
+}) => (
+  <div className="flex items-center justify-between">
+    <Skeleton className={cn("h-3", labelW)} />
+    <Skeleton
+      className={cn(pill ? "h-5 rounded-full" : "h-4 rounded-md", valueW)}
+    />
+  </div>
+);
+
+const Card = ({ children }: { children: React.ReactNode }) => (
+  <div className="space-y-3 rounded-xl border border-border/70 bg-card/60 p-3.5 shadow-2xs [&>*:not(:first-child)]:border-t [&>*:not(:first-child)]:border-border/40 [&>*:not(:first-child)]:pt-2">
+    {children}
+  </div>
+);
+
+function DetailsPanelSkeleton() {
+  return (
+    <div className="space-y-3 p-4">
+      {/* header */}
+      <div className="flex items-center gap-2 border-b border-border/50 pb-2">
+        <Skeleton className="size-4 rounded" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+
+      {/* identity & status */}
+      <Card>
+        <Row valueW="w-20" />
+        <Row labelW="w-10" valueW="w-20" pill />
+        <Row labelW="w-12" valueW="w-16" pill />
+        <Row labelW="w-14" valueW="w-24" pill />
+      </Card>
+
+      {/* support contact */}
+      <Card>
+        <Skeleton className="h-3 w-24" />
+        <div className="flex items-center gap-2.5">
+          <Skeleton className="size-8 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-2.5 w-20" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Skeleton className="size-8 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-2.5 w-16" />
+          </div>
+        </div>
+      </Card>
+
+      {/* activity */}
+      <Card>
+        <Skeleton className="h-3 w-14" />
+        <Row labelW="w-16" valueW="w-24" />
+        <Row labelW="w-24" valueW="w-24" />
+        <Row labelW="w-20" valueW="w-6" />
+        <Row labelW="w-24" valueW="w-10" />
+      </Card>
+    </div>
+  );
+}
+
 export function SupportConversationSkeleton() {
   return (
     <div
-      className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden"
       role="status"
       aria-busy="true"
+      aria-live="polite"
       aria-label="Loading conversation"
+      className="relative flex h-full w-full flex-col overflow-hidden bg-background"
     >
-      <div className="flex items-center justify-between border-b px-5 py-4">
-        <div className="flex items-center gap-3">
-          <Skeleton className="size-10 rounded-xl" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-3 w-24" />
+      {/* top bar */}
+      <div className="flex shrink-0 items-center justify-between border-b px-4 py-3 sm:px-5">
+        <div className="space-y-2 min-w-0">
+          <Skeleton className="h-4 w-40 sm:w-56" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="hidden h-6 w-20 rounded-full sm:block" />
+          <Skeleton className="size-8 rounded-lg" />
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {/* conversation column */}
+        <section className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col justify-end gap-6 overflow-hidden px-4 py-5 sm:px-6">
+            <Bubble lines={["w-56", "w-44", "w-20"]} />
+            <Bubble mine lines={["w-40", "w-28"]} />
+            <Bubble lines={["w-64", "w-48"]} />
+            <Bubble mine lines={["w-52"]} />
+            <Bubble lines={["w-56", "w-36", "w-24"]} />
           </div>
-        </div>
 
-        <Skeleton className="h-7 w-20 rounded-full" />
+          {/* composer */}
+          <div className="shrink-0 border-t p-4">
+            <div className="flex items-end gap-3 rounded-xl border bg-muted/20 p-3">
+              <Skeleton className="h-10 flex-1 rounded-lg" />
+              <Skeleton className="size-10 shrink-0 rounded-lg" />
+            </div>
+          </div>
+        </section>
+
+        {/* details sidebar (desktop only, same classes as the real aside) */}
+        <aside className="hidden h-full w-80 shrink-0 overflow-hidden border-s border-border/70 bg-card/30 lg:block">
+          <DetailsPanelSkeleton />
+        </aside>
       </div>
 
-      <div className="flex flex-1 flex-col justify-end gap-6 overflow-hidden p-5">
-        <Bubble />
-        <Bubble mine />
-        <Bubble />
-        <Bubble mine />
-        <Bubble />
-      </div>
-
-      <div className="border-t p-4">
-        <div className="flex items-end gap-3 rounded-xl border bg-muted/20 p-3">
-          <Skeleton className="h-10 flex-1 rounded-lg" />
-          <Skeleton className="size-10 shrink-0 rounded-lg" />
-        </div>
-      </div>
-
-      <span className="sr-only">Loading conversation...</span>
+      <span className="sr-only">Loading conversation…</span>
     </div>
   );
 }
